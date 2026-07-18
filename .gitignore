@@ -1,0 +1,15 @@
+# Sistema operacional
+.DS_Store
+Thumbs.db
+
+# Editores
+.vscode/
+.idea/
+.claude/
+
+# Node (caso use ferramentas como `npx serve` ou similares)
+node_modules/
+npm-debug.log*
+
+# Logs diversos
+*.log

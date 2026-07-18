@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Painel Administrativo — BG Collection & Co</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- ===================== LOGIN ===================== -->
+  <div class="login-screen" id="login-screen">
+    <div class="login-card">
+      <h1>BG Collection & Co</h1>
+      <p class="login-card__subtitle">Painel administrativo</p>
+      <form id="login-form">
+        <div class="field">
+          <label for="login-email">E-mail</label>
+          <input type="email" id="login-email" required autocomplete="username" />
+        </div>
+        <div class="field">
+          <label for="login-password">Senha</label>
+          <input type="password" id="login-password" required autocomplete="current-password" />
+        </div>
+        <button type="submit" class="btn btn-primary btn-block" id="login-submit">Entrar</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===================== SHELL ===================== -->
+  <div class="admin-shell hidden" id="admin-shell">
+    <nav class="admin-nav">
+      <div class="admin-nav__brand">BG Admin</div>
+      <button class="admin-nav__link active" data-view="dashboard">📊 Dashboard</button>
+      <button class="admin-nav__link" data-view="products">👜 Produtos</button>
+      <button class="admin-nav__link" data-view="orders">📦 Pedidos</button>
+      <button class="admin-nav__link" data-view="settings">⚙️ Configurações</button>
+      <div class="admin-nav__spacer"></div>
+      <button class="admin-nav__link" id="logout-btn">🚪 Sair</button>
+    </nav>
+
+    <main class="admin-main">
+      <!-- ---------- DASHBOARD ---------- -->
+      <section id="view-dashboard" class="admin-view">
+        <div class="admin-topbar"><h2>Dashboard</h2></div>
+
+        <div id="low-stock-alert" class="low-stock-alert hidden">
+          <h3>⚠️ Estoque baixo</h3>
+          <ul class="mini-list" id="low-stock-list"></ul>
+        </div>
+
+        <div class="stat-grid" id="stat-grid"></div>
+
+        <div class="dashboard-grid">
+          <div class="panel">
+            <h3>Faturamento mensal</h3>
+            <div class="chart-wrap">
+              <canvas id="monthly-chart"></canvas>
+            </div>
+          </div>
+          <div class="panel">
+            <h3>Top 5 produtos</h3>
+            <ul class="mini-list" id="top-products-list"></ul>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>Mais vendido por categoria</h3>
+          <ul class="mini-list" id="top-by-category-list"></ul>
+        </div>
+      </section>
+
+      <!-- ---------- PRODUTOS ---------- -->
+      <section id="view-products" class="admin-view hidden">
+        <div class="admin-topbar">
+          <h2>Produtos</h2>
+          <button class="btn btn-primary" id="new-product-btn">+ Novo produto</button>
+        </div>
+
+        <div id="products-admin-state" class="state-banner">
+          <div class="spinner"></div>
+          <p>Carregando produtos...</p>
+        </div>
+
+        <div class="data-table-wrap hidden" id="products-table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Foto</th>
+                <th>Nome</th>
+                <th>Categoria</th>
+                <th>Preço</th>
+                <th>Estoque</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="products-table-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ---------- PEDIDOS ---------- -->
+      <section id="view-orders" class="admin-view hidden">
+        <div class="admin-topbar"><h2>Pedidos</h2></div>
+
+        <div id="orders-state" class="state-banner">
+          <div class="spinner"></div>
+          <p>Carregando pedidos...</p>
+        </div>
+
+        <div class="data-table-wrap hidden" id="orders-table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Cliente</th>
+                <th>Telefone</th>
+                <th>Itens</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody id="orders-table-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ---------- CONFIGURAÇÕES ---------- -->
+      <section id="view-settings" class="admin-view hidden">
+        <div class="admin-topbar"><h2>Configurações da loja</h2></div>
+
+        <div class="panel" style="max-width: 480px;">
+          <form id="settings-form">
+            <div class="field">
+              <label for="settings-store-name">Nome da loja</label>
+              <input type="text" id="settings-store-name" required />
+            </div>
+            <div class="field">
+              <label for="settings-whatsapp">WhatsApp (com DDI e DDD, só números)</label>
+              <input type="text" id="settings-whatsapp" placeholder="5511912345678" required />
+              <div class="field-hint">Exemplo: 55 (Brasil) + DDD + número, sem espaços ou símbolos.</div>
+            </div>
+            <div class="field">
+              <label for="settings-instagram">Instagram (usuário, sem @)</label>
+              <input type="text" id="settings-instagram" placeholder="bgcollection" />
+            </div>
+            <div class="field">
+              <label>Foto em destaque</label>
+              <div class="photo-upload">
+                <img id="settings-photo-preview" class="photo-upload__preview" src="" alt="" />
+                <input type="file" id="settings-photo-input" accept="image/*" />
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary" id="settings-submit">Salvar configurações</button>
+          </form>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- ===================== MODAL PRODUTO ===================== -->
+  <div class="modal-overlay hidden" id="product-modal">
+    <div class="modal modal--wide">
+      <div class="modal__header">
+        <h3 id="product-modal-title" style="margin:0;">Novo produto</h3>
+        <button class="modal__close" id="product-modal-close" aria-label="Fechar">✕</button>
+      </div>
+      <form id="product-form">
+        <div class="modal__body">
+          <input type="hidden" id="product-id" />
+          <div class="field">
+            <label for="product-name">Nome</label>
+            <input type="text" id="product-name" required />
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="product-category">Categoria</label>
+              <select id="product-category" required>
+                <option value="Bolsas">Bolsas</option>
+                <option value="Pulseiras">Pulseiras</option>
+                <option value="Relógios">Relógios</option>
+                <option value="Brincos">Brincos</option>
+                <option value="Cintos">Cintos</option>
+                <option value="Lenços">Lenços</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="product-stock">Estoque</label>
+              <input type="number" id="product-stock" min="0" step="1" required />
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="product-price">Preço de venda (R$)</label>
+              <input type="number" id="product-price" min="0" step="0.01" required />
+            </div>
+            <div class="field">
+              <label for="product-cost">Preço de custo (R$)</label>
+              <input type="number" id="product-cost" min="0" step="0.01" required />
+            </div>
+          </div>
+          <div class="field">
+            <label for="product-low-stock">Alertar quando estoque for menor ou igual a</label>
+            <input type="number" id="product-low-stock" min="0" step="1" value="3" required />
+          </div>
+          <div class="field">
+            <label for="product-description">Descrição</label>
+            <textarea id="product-description"></textarea>
+          </div>
+          <div class="field">
+            <label>Foto do produto</label>
+            <div class="photo-upload">
+              <img id="product-photo-preview" class="photo-upload__preview" src="" alt="" />
+              <input type="file" id="product-photo-input" accept="image/*" />
+            </div>
+          </div>
+        </div>
+        <div class="modal__footer">
+          <button type="button" class="btn btn-outline" id="product-modal-cancel">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="product-submit">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===================== MODAL CONFIRMAR EXCLUSÃO ===================== -->
+  <div class="modal-overlay hidden" id="confirm-modal">
+    <div class="modal">
+      <div class="modal__header">
+        <h3 style="margin:0;">Excluir produto</h3>
+        <button class="modal__close" id="confirm-modal-close" aria-label="Fechar">✕</button>
+      </div>
+      <div class="modal__body">
+        <p id="confirm-modal-text">Tem certeza que deseja excluir este produto? Essa ação não pode ser desfeita.</p>
+      </div>
+      <div class="modal__footer">
+        <button type="button" class="btn btn-outline" id="confirm-cancel">Cancelar</button>
+        <button type="button" class="btn btn-danger" id="confirm-accept">Excluir</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  <script src="js/supabase-client.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>

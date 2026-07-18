@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BG Collection & Co</title>
+  <meta name="description" content="Bolsas e acessórios com estilo — BG Collection & Co" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <div id="toast-container" class="toast-container"></div>
+
+  <header class="store-header">
+    <div class="store-header__bar container">
+      <div class="store-header__brand">
+        <h1 id="store-name">BG Collection & Co</h1>
+      </div>
+      <div class="store-header__actions">
+        <a id="instagram-link" class="btn-icon" href="#" target="_blank" rel="noopener" title="Instagram" style="display:flex;align-items:center;justify-content:center;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1"/></svg>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <section class="hero" id="hero-section" style="display:none;">
+    <img id="hero-image" class="hero__image" src="" alt="Destaque da coleção" />
+    <div class="hero__caption">
+      <h2>Nova Coleção</h2>
+    </div>
+  </section>
+
+  <nav class="category-tabs" id="category-tabs" aria-label="Categorias"></nav>
+
+  <main>
+    <div id="products-state" class="state-banner">
+      <div class="spinner"></div>
+      <p>Carregando produtos...</p>
+    </div>
+    <div class="product-grid hidden" id="product-grid"></div>
+  </main>
+
+  <button class="cart-fab" id="cart-fab" aria-label="Abrir carrinho">
+    🛍️
+    <span class="cart-fab__badge hidden" id="cart-badge">0</span>
+  </button>
+
+  <div class="cart-overlay hidden" id="cart-overlay">
+    <div class="cart-drawer">
+      <div class="cart-drawer__header">
+        <h3 style="margin:0;">Seu carrinho</h3>
+        <button class="modal__close" id="cart-close" aria-label="Fechar carrinho">✕</button>
+      </div>
+      <div class="cart-drawer__items" id="cart-items">
+        <p class="state-banner" id="cart-empty">Seu carrinho está vazio.</p>
+      </div>
+      <div class="cart-drawer__footer" id="cart-footer" style="display:none;">
+        <div class="cart-drawer__subtotal">
+          <span>Total</span>
+          <span id="cart-total">R$ 0,00</span>
+        </div>
+        <button class="btn btn-primary btn-block" id="checkout-btn">Finalizar pedido no WhatsApp</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay hidden" id="checkout-modal">
+    <div class="modal">
+      <div class="modal__header">
+        <h3 style="margin:0;">Finalizar pedido</h3>
+        <button class="modal__close" id="checkout-close" aria-label="Fechar">✕</button>
+      </div>
+      <form id="checkout-form">
+        <div class="modal__body">
+          <div class="field">
+            <label for="customer-name">Seu nome</label>
+            <input type="text" id="customer-name" required autocomplete="name" />
+          </div>
+          <div class="field">
+            <label for="customer-phone">Seu telefone (com DDD)</label>
+            <input type="tel" id="customer-phone" required autocomplete="tel" placeholder="(11) 91234-5678" />
+          </div>
+          <p class="field-hint">Você será redirecionada(o) ao WhatsApp para confirmar o pedido com a loja.</p>
+        </div>
+        <div class="modal__footer">
+          <button type="button" class="btn btn-outline" id="checkout-cancel">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="checkout-submit">Enviar pedido</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <footer class="store-footer">
+    <p id="footer-text">© <span id="footer-year"></span> BG Collection & Co. Todos os direitos reservados.</p>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase-client.js"></script>
+  <script src="js/store.js"></script>
+</body>
+</html>
