@@ -146,10 +146,47 @@
       renderCategoryTabs();
       renderProducts();
       renderHeroDestaque();
+      reconcileCartWithProducts();
     } catch (err) {
       console.error('Erro ao carregar produtos:', err);
       stateBanner.innerHTML = '<p>Não foi possível carregar os produtos agora. Tente recarregar a página.</p>';
       stateBanner.classList.add('error');
+    }
+  }
+
+  // Remove do carrinho itens de produtos que foram excluídos/desativados, e
+  // ajusta a quantidade se o estoque atual for menor do que o que está no
+  // carrinho. Roda sempre que a lista de produtos é (re)carregada.
+  function reconcileCartWithProducts() {
+    const removed = [];
+    const adjusted = [];
+
+    state.cart = state.cart.filter((item) => {
+      const product = state.products.find((p) => p.id === item.productId);
+
+      if (!product || product.stock_quantity <= 0) {
+        removed.push(item.name);
+        return false;
+      }
+
+      if (item.quantity > product.stock_quantity) {
+        item.quantity = product.stock_quantity;
+        adjusted.push(item.name);
+      }
+
+      return true;
+    });
+
+    if (removed.length === 0 && adjusted.length === 0) return;
+
+    saveCart();
+    renderCartBadge();
+
+    if (removed.length > 0) {
+      showToast(`Removido do carrinho (não está mais disponível): ${removed.join(', ')}.`, 'error');
+    }
+    if (adjusted.length > 0) {
+      showToast(`Quantidade ajustada por causa do estoque: ${adjusted.join(', ')}.`, 'error');
     }
   }
 
@@ -456,6 +493,20 @@
     return lines.join('\n');
   }
 
+  async function decrementStockForCart(cartItems) {
+    for (const item of cartItems) {
+      try {
+        const { error } = await window.sbClient.rpc('decrement_stock', {
+          product_id: item.productId,
+          qty: item.quantity,
+        });
+        if (error) throw error;
+      } catch (err) {
+        console.error('Erro ao descontar estoque de', item.name, err);
+      }
+    }
+  }
+
   async function submitCheckout(event) {
     event.preventDefault();
 
@@ -493,6 +544,8 @@
       const { error } = await window.sbClient.from('orders').insert(orderPayload);
       if (error) throw error;
 
+      await decrementStockForCart(state.cart);
+
       const message = buildWhatsappMessage(orderPayload, name);
       const waNumber = state.settings.whatsapp_number.replace(/\D/g, '');
       const waUrl = `https://wa.me/${waNumber}?text=${encodeURIComponent(message)}`;
@@ -505,6 +558,8 @@
 
       window.open(waUrl, '_blank', 'noopener');
       showToast('Pedido registrado! Continue no WhatsApp para confirmar.', 'success');
+
+      loadProducts();
     } catch (err) {
       console.error('Erro ao registrar pedido:', err);
       showToast('Não foi possível registrar seu pedido. Tente novamente.', 'error');

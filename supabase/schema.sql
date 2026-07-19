@@ -107,6 +107,27 @@ create trigger products_set_updated_at
   before update on public.products
   for each row execute function public.set_updated_at();
 
+-- ----------------------------------------------------------------------------
+-- Desconto de estoque ao finalizar pedido
+-- SECURITY DEFINER: roda com privilégio elevado para permitir que o cliente
+-- anônimo (que não tem permissão de UPDATE em products via RLS) desconte
+-- estoque só através desta função, de forma atômica e nunca abaixo de zero.
+-- ----------------------------------------------------------------------------
+create or replace function public.decrement_stock(product_id uuid, qty integer)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update public.products
+  set stock_quantity = greatest(0, stock_quantity - qty)
+  where id = product_id;
+end;
+$$;
+
+grant execute on function public.decrement_stock(uuid, integer) to anon, authenticated;
+
 drop trigger if exists store_settings_set_updated_at on public.store_settings;
 create trigger store_settings_set_updated_at
   before update on public.store_settings
