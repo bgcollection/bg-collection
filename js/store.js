@@ -615,7 +615,10 @@
   document.addEventListener('DOMContentLoaded', () => {
     bindEvents();
     renderCartBadge();
-    loadSettings();
-    loadProducts();
+
+    const minSplashTime = new Promise((resolve) => setTimeout(resolve, 1100));
+    Promise.all([loadSettings(), loadProducts(), minSplashTime]).finally(() => {
+      document.getElementById('splash').classList.add('hide');
+    });
   });
 })();
