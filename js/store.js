@@ -94,6 +94,13 @@
     } else {
       instagramLink.style.display = 'none';
     }
+
+    const whatsappLink = document.getElementById('whatsapp-link');
+    if (s.whatsapp_number) {
+      whatsappLink.href = `https://wa.me/${s.whatsapp_number.replace(/\D/g, '')}`;
+    } else {
+      whatsappLink.style.display = 'none';
+    }
   }
 
   function renderHeroDestaque() {

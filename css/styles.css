@@ -259,6 +259,24 @@ input, select, textarea {
   color: var(--text2);
 }
 
+.social-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.social-icon--instagram {
+  background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);
+}
+
+.social-icon--whatsapp {
+  background: #25d366;
+}
+
 .btn-block {
   width: 100%;
 }
