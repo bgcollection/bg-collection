@@ -16,8 +16,9 @@
     orders: [],
     settings: null,
     editingProductId: null,
-    selectedProductPhotoFile: null,
-    selectedSettingsPhotoFile: null,
+    existingPhotoUrls: [],
+    newPhotoFiles: [],
+    isFeatured: false,
     deleteTargetId: null,
     chartInstance: null,
   };
@@ -210,7 +211,7 @@
     const body = document.getElementById('products-table-body');
 
     if (state.products.length === 0) {
-      body.innerHTML = '<tr><td colspan="6">Nenhum produto cadastrado ainda.</td></tr>';
+      body.innerHTML = '<tr><td colspan="7">Nenhum produto cadastrado ainda.</td></tr>';
       return;
     }
 
@@ -218,12 +219,16 @@
     state.products.forEach((product) => {
       const tr = document.createElement('tr');
       const lowStock = product.stock_quantity <= product.low_stock_threshold;
+      const thumb = product.photo_urls && product.photo_urls[0];
       tr.innerHTML = `
-        <td>${product.photo_url ? `<img class="table-thumb" src="${escapeHtml(product.photo_url)}" alt="" />` : '<div class="table-thumb"></div>'}</td>
+        <td>${thumb ? `<img class="table-thumb" src="${escapeHtml(thumb)}" alt="" />` : '<div class="table-thumb"></div>'}</td>
         <td>${escapeHtml(product.name)}</td>
         <td>${escapeHtml(product.category)}</td>
         <td>${formatBRL(product.price)}</td>
         <td><span class="pill ${lowStock ? 'pill-danger' : ''}">${product.stock_quantity}</span></td>
+        <td>
+          <button type="button" data-action="toggle-featured" title="Colocar em destaque" style="background:none;border:none;cursor:pointer;font-size:1.1rem;opacity:${product.is_featured ? 1 : 0.3};">⭐</button>
+        </td>
         <td>
           <div class="table-actions">
             <button class="btn btn-outline btn-sm" data-action="edit">Editar</button>
@@ -233,13 +238,16 @@
       `;
       tr.querySelector('[data-action="edit"]').addEventListener('click', () => openProductModal(product));
       tr.querySelector('[data-action="delete"]').addEventListener('click', () => openConfirmDelete(product.id, product.name));
+      tr.querySelector('[data-action="toggle-featured"]').addEventListener('click', () => toggleFeaturedQuick(product));
       body.appendChild(tr);
     });
   }
 
   function openProductModal(product) {
     state.editingProductId = product ? product.id : null;
-    state.selectedProductPhotoFile = null;
+    state.existingPhotoUrls = product ? [...(product.photo_urls || [])] : [];
+    state.newPhotoFiles = [];
+    state.isFeatured = product ? !!product.is_featured : false;
 
     document.getElementById('product-modal-title').textContent = product ? 'Editar produto' : 'Novo produto';
     document.getElementById('product-id').value = product ? product.id : '';
@@ -250,23 +258,80 @@
     document.getElementById('product-cost').value = product ? product.cost_price : '';
     document.getElementById('product-low-stock').value = product ? product.low_stock_threshold : 3;
     document.getElementById('product-description').value = product ? (product.description || '') : '';
+    document.getElementById('product-badge').value = product ? (product.badge || '') : '';
 
-    const preview = document.getElementById('product-photo-preview');
-    preview.src = product && product.photo_url ? product.photo_url : '';
-    document.getElementById('product-photo-input').value = '';
+    document.getElementById('product-photos-input').value = '';
+    renderPhotoPreviewGrid();
+    updateFeaturedToggleUi();
 
     document.getElementById('product-modal').classList.remove('hidden');
+  }
+
+  function updateFeaturedToggleUi() {
+    document.getElementById('product-featured-toggle').classList.toggle('active', state.isFeatured);
+  }
+
+  function toggleFeaturedFlag() {
+    state.isFeatured = !state.isFeatured;
+    updateFeaturedToggleUi();
+  }
+
+  async function unsetOtherFeatured(exceptId) {
+    let query = window.sbClient.from('products').update({ is_featured: false }).eq('is_featured', true);
+    if (exceptId) query = query.neq('id', exceptId);
+    const { error } = await query;
+    if (error) throw error;
+  }
+
+  async function toggleFeaturedQuick(product) {
+    try {
+      const makeFeatured = !product.is_featured;
+      if (makeFeatured) await unsetOtherFeatured(product.id);
+      const { error } = await window.sbClient.from('products').update({ is_featured: makeFeatured }).eq('id', product.id);
+      if (error) throw error;
+      showToast(makeFeatured ? `${product.name} agora é o destaque.` : 'Destaque removido.', 'success');
+      await loadProductsAdmin();
+    } catch (err) {
+      console.error('Erro ao atualizar destaque:', err);
+      showToast('Não foi possível atualizar o destaque.', 'error');
+    }
   }
 
   function closeProductModal() {
     document.getElementById('product-modal').classList.add('hidden');
   }
 
-  async function handleProductPhotoChange(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-    state.selectedProductPhotoFile = file;
-    document.getElementById('product-photo-preview').src = URL.createObjectURL(file);
+  function renderPhotoPreviewGrid() {
+    const grid = document.getElementById('product-photos-preview');
+    grid.innerHTML = '';
+
+    state.existingPhotoUrls.forEach((url, index) => {
+      const item = document.createElement('div');
+      item.className = 'photo-preview-item';
+      item.innerHTML = `<img src="${escapeHtml(url)}" alt="" /><button type="button" aria-label="Remover foto">✕</button>`;
+      item.querySelector('button').addEventListener('click', () => {
+        state.existingPhotoUrls.splice(index, 1);
+        renderPhotoPreviewGrid();
+      });
+      grid.appendChild(item);
+    });
+
+    state.newPhotoFiles.forEach((file, index) => {
+      const item = document.createElement('div');
+      item.className = 'photo-preview-item';
+      item.innerHTML = `<img src="${URL.createObjectURL(file)}" alt="" /><button type="button" aria-label="Remover foto">✕</button>`;
+      item.querySelector('button').addEventListener('click', () => {
+        state.newPhotoFiles.splice(index, 1);
+        renderPhotoPreviewGrid();
+      });
+      grid.appendChild(item);
+    });
+  }
+
+  function handleProductPhotosChange(event) {
+    state.newPhotoFiles.push(...Array.from(event.target.files));
+    event.target.value = '';
+    renderPhotoPreviewGrid();
   }
 
   async function handleProductSubmit(event) {
@@ -281,6 +346,8 @@
       cost_price: Number(document.getElementById('product-cost').value),
       low_stock_threshold: Number(document.getElementById('product-low-stock').value),
       description: document.getElementById('product-description').value.trim(),
+      badge: document.getElementById('product-badge').value || null,
+      is_featured: state.isFeatured,
     };
 
     if (!payload.name) {
@@ -291,9 +358,15 @@
     setButtonLoading(submitBtn, 'Salvando...');
 
     try {
-      if (state.selectedProductPhotoFile) {
-        const blob = await compressImage(state.selectedProductPhotoFile, PHOTO_MAX_DIMENSION, PHOTO_QUALITY);
-        payload.photo_url = await uploadPhoto(blob, 'product');
+      const uploadedUrls = [];
+      for (const file of state.newPhotoFiles) {
+        const blob = await compressImage(file, PHOTO_MAX_DIMENSION, PHOTO_QUALITY);
+        uploadedUrls.push(await uploadPhoto(blob, 'product'));
+      }
+      payload.photo_urls = [...state.existingPhotoUrls, ...uploadedUrls];
+
+      if (payload.is_featured) {
+        await unsetOtherFeatured(state.editingProductId);
       }
 
       if (state.editingProductId) {
@@ -415,18 +488,10 @@
       document.getElementById('settings-store-name').value = data.store_name || '';
       document.getElementById('settings-whatsapp').value = data.whatsapp_number || '';
       document.getElementById('settings-instagram').value = data.instagram_handle || '';
-      document.getElementById('settings-photo-preview').src = data.featured_photo_url || '';
     } catch (err) {
       console.error('Erro ao carregar configurações:', err);
       showToast('Não foi possível carregar as configurações da loja.', 'error');
     }
-  }
-
-  function handleSettingsPhotoChange(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-    state.selectedSettingsPhotoFile = file;
-    document.getElementById('settings-photo-preview').src = URL.createObjectURL(file);
   }
 
   async function handleSettingsSubmit(event) {
@@ -442,15 +507,9 @@
     setButtonLoading(submitBtn, 'Salvando...');
 
     try {
-      if (state.selectedSettingsPhotoFile) {
-        const blob = await compressImage(state.selectedSettingsPhotoFile, PHOTO_MAX_DIMENSION, PHOTO_QUALITY);
-        payload.featured_photo_url = await uploadPhoto(blob, 'featured');
-      }
-
       const { error } = await window.sbClient.from('store_settings').update(payload).eq('id', 1);
       if (error) throw error;
 
-      state.selectedSettingsPhotoFile = null;
       showToast('Configurações salvas com sucesso.', 'success');
     } catch (err) {
       console.error('Erro ao salvar configurações:', err);
@@ -597,8 +656,8 @@
           {
             label: 'Faturamento',
             data: revenue,
-            backgroundColor: '#b76e79',
-            borderRadius: 6,
+            backgroundColor: '#c8882a',
+            borderRadius: 4,
           },
         ],
       },
@@ -637,14 +696,14 @@
     document.getElementById('product-modal-close').addEventListener('click', closeProductModal);
     document.getElementById('product-modal-cancel').addEventListener('click', closeProductModal);
     document.getElementById('product-form').addEventListener('submit', handleProductSubmit);
-    document.getElementById('product-photo-input').addEventListener('change', handleProductPhotoChange);
+    document.getElementById('product-photos-input').addEventListener('change', handleProductPhotosChange);
+    document.getElementById('product-featured-toggle').addEventListener('click', toggleFeaturedFlag);
 
     document.getElementById('confirm-modal-close').addEventListener('click', closeConfirmDelete);
     document.getElementById('confirm-cancel').addEventListener('click', closeConfirmDelete);
     document.getElementById('confirm-accept').addEventListener('click', handleConfirmDelete);
 
     document.getElementById('settings-form').addEventListener('submit', handleSettingsSubmit);
-    document.getElementById('settings-photo-input').addEventListener('change', handleSettingsPhotoChange);
   }
 
   // -- Init -------------------------------------------------------------

@@ -92,6 +92,7 @@
                 <th>Categoria</th>
                 <th>Preço</th>
                 <th>Estoque</th>
+                <th>⭐</th>
                 <th>Ações</th>
               </tr>
             </thead>
@@ -144,13 +145,7 @@
               <label for="settings-instagram">Instagram (usuário, sem @)</label>
               <input type="text" id="settings-instagram" placeholder="bgcollection" />
             </div>
-            <div class="field">
-              <label>Foto em destaque</label>
-              <div class="photo-upload">
-                <img id="settings-photo-preview" class="photo-upload__preview" src="" alt="" />
-                <input type="file" id="settings-photo-input" accept="image/*" />
-              </div>
-            </div>
+            <p class="field-hint">O destaque da home agora é escolhido marcando um produto com a estrela ⭐, na aba Produtos.</p>
             <button type="submit" class="btn btn-primary" id="settings-submit">Salvar configurações</button>
           </form>
         </div>
@@ -199,20 +194,31 @@
               <input type="number" id="product-cost" min="0" step="0.01" required />
             </div>
           </div>
-          <div class="field">
-            <label for="product-low-stock">Alertar quando estoque for menor ou igual a</label>
-            <input type="number" id="product-low-stock" min="0" step="1" value="3" required />
+          <div class="field-row">
+            <div class="field">
+              <label for="product-low-stock">Alertar quando estoque for menor ou igual a</label>
+              <input type="number" id="product-low-stock" min="0" step="1" value="3" required />
+            </div>
+            <div class="field">
+              <label for="product-badge">Selo no card</label>
+              <select id="product-badge">
+                <option value="">Nenhum</option>
+                <option value="new">Novo</option>
+                <option value="sale">Sale</option>
+              </select>
+            </div>
           </div>
           <div class="field">
             <label for="product-description">Descrição</label>
             <textarea id="product-description"></textarea>
           </div>
           <div class="field">
-            <label>Foto do produto</label>
-            <div class="photo-upload">
-              <img id="product-photo-preview" class="photo-upload__preview" src="" alt="" />
-              <input type="file" id="product-photo-input" accept="image/*" />
-            </div>
+            <label>Fotos do produto</label>
+            <input type="file" id="product-photos-input" accept="image/*" multiple />
+            <div class="photo-preview-grid" id="product-photos-preview"></div>
+          </div>
+          <div class="field">
+            <button type="button" class="category-tab" id="product-featured-toggle">⭐ Colocar em destaque na home</button>
           </div>
         </div>
         <div class="modal__footer">

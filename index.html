@@ -23,11 +23,14 @@
     </div>
   </header>
 
-  <section class="hero" id="hero-section" style="display:none;">
-    <img id="hero-image" class="hero__image" src="" alt="Destaque da coleção" />
-    <div class="hero__caption">
-      <h2>Nova Coleção</h2>
+  <section class="hero" id="hero-section">
+    <div class="hero__text">
+      <div class="hero__tag">BG Collection &amp; Co.</div>
+      <h2>Elegância que<br />você carrega</h2>
+      <p class="field-hint" style="margin-bottom:20px;">Novas chegadas toda semana</p>
+      <button class="btn btn-primary" id="hero-cta">Ver coleção</button>
     </div>
+    <div class="hero__card" id="hero-destaque"></div>
   </section>
 
   <nav class="category-tabs" id="category-tabs" aria-label="Categorias"></nav>
@@ -93,6 +96,29 @@
   <footer class="store-footer">
     <p id="footer-text">© <span id="footer-year"></span> BG Collection & Co. Todos os direitos reservados.</p>
   </footer>
+
+  <div class="lightbox-overlay hidden" id="lightbox-overlay">
+    <div class="lightbox-top">
+      <div>
+        <div class="lightbox-cat" id="lightbox-cat"></div>
+        <div class="lightbox-name" id="lightbox-name"></div>
+      </div>
+      <button class="lightbox-close" id="lightbox-close" aria-label="Fechar">✕</button>
+    </div>
+    <div class="lightbox-main">
+      <button class="lightbox-arrow" id="lightbox-prev" aria-label="Foto anterior">‹</button>
+      <div id="lightbox-img-wrap"></div>
+      <button class="lightbox-arrow" id="lightbox-next" aria-label="Próxima foto">›</button>
+    </div>
+    <div class="lightbox-bottom">
+      <div class="lightbox-thumbs" id="lightbox-thumbs"></div>
+      <div class="lightbox-dots" id="lightbox-dots"></div>
+      <div class="lightbox-info">
+        <div class="lightbox-price" id="lightbox-price"></div>
+        <button class="btn btn-primary lightbox-addcart" id="lightbox-addcart">Adicionar ao carrinho</button>
+      </div>
+    </div>
+  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/supabase-client.js"></script>

@@ -19,14 +19,38 @@ create table if not exists public.products (
   stock_quantity integer not null default 0 check (stock_quantity >= 0),
   low_stock_threshold integer not null default 3 check (low_stock_threshold >= 0),
   description text,
-  photo_url text,
+  photo_urls text[] not null default '{}',
+  badge text check (badge is null or badge in ('new', 'sale')),
+  is_featured boolean not null default false,
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 
+-- Migração: bancos criados antes da galeria de múltiplas fotos tinham uma
+-- coluna única `photo_url`. Este bloco é seguro de rodar em bancos novos
+-- (não faz nada) e em bancos existentes (migra o valor antigo pro array).
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'products' and column_name = 'photo_url'
+  ) then
+    alter table public.products add column if not exists photo_urls text[] not null default '{}';
+    update public.products
+      set photo_urls = array[photo_url]
+      where photo_url is not null and photo_url <> '' and coalesce(array_length(photo_urls, 1), 0) = 0;
+    alter table public.products drop column photo_url;
+  end if;
+end $$;
+
+-- Migração: bancos criados antes do destaque-por-produto e dos badges.
+alter table public.products add column if not exists badge text;
+alter table public.products add column if not exists is_featured boolean not null default false;
+
 create index if not exists products_category_idx on public.products (category);
 create index if not exists products_is_active_idx on public.products (is_active);
+create unique index if not exists products_single_featured_idx on public.products (is_featured) where is_featured;
 
 -- ----------------------------------------------------------------------------
 -- Tabela: orders
@@ -54,13 +78,16 @@ create table if not exists public.store_settings (
   store_name text not null default 'BG Collection & Co',
   whatsapp_number text,
   instagram_handle text,
-  featured_photo_url text,
   updated_at timestamptz not null default now()
 );
 
 insert into public.store_settings (id, store_name)
 values (1, 'BG Collection & Co')
 on conflict (id) do nothing;
+
+-- Migração: o destaque da home passou a ser um produto marcado (is_featured),
+-- não mais uma foto avulsa nas configurações.
+alter table public.store_settings drop column if exists featured_photo_url;
 
 -- ----------------------------------------------------------------------------
 -- updated_at automático
