@@ -22,6 +22,7 @@
 
   --font-heading: 'Playfair Display', Georgia, serif;
   --font-body: 'Jost', system-ui, -apple-system, sans-serif;
+  --font-title: Verdana, Geneva, sans-serif;
 
   --radius-sm: 5px;
   --radius-md: 8px;
@@ -1483,6 +1484,21 @@ input, select, textarea {
     height: 38px;
     font-size: 1.3rem;
   }
+}
+
+/* ----------------------------------------------------------------------------
+   Títulos grandes em Verdana (nome da loja, título do hero, nomes de produto)
+   — o resto do site continua em Playfair Display itálico / Jost.
+   ---------------------------------------------------------------------------- */
+.hero__text h2,
+.product-card__name,
+.destaque-card__name,
+.lightbox-name,
+.cart-item__name,
+.login-card h1,
+.admin-nav__brand {
+  font-family: var(--font-title);
+  font-style: normal;
 }
 
 /* ----------------------------------------------------------------------------
