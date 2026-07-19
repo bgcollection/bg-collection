@@ -422,7 +422,7 @@ input, select, textarea {
 }
 
 .store-header__logo {
-  height: 42px;
+  height: 54px;
   width: auto;
   display: block;
 }
@@ -606,7 +606,7 @@ input, select, textarea {
   }
 
   .store-header__logo {
-    height: 32px;
+    height: 40px;
   }
 }
 
