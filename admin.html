@@ -35,6 +35,7 @@
       <button class="admin-nav__link active" data-view="dashboard">📊 Dashboard</button>
       <button class="admin-nav__link" data-view="products">👜 Produtos</button>
       <button class="admin-nav__link" data-view="orders">📦 Pedidos</button>
+      <button class="admin-nav__link" data-view="customers">👥 Clientes</button>
       <button class="admin-nav__link" data-view="settings">⚙️ Configurações</button>
       <div class="admin-nav__spacer"></div>
       <button class="admin-nav__link" id="logout-btn">🚪 Sair</button>
@@ -122,6 +123,32 @@
               </tr>
             </thead>
             <tbody id="orders-table-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ---------- CLIENTES ---------- -->
+      <section id="view-customers" class="admin-view hidden">
+        <div class="admin-topbar"><h2>Clientes</h2></div>
+        <p class="field-hint" style="margin-bottom:16px;">Montado automaticamente a partir do nome e telefone informados no checkout — não é um cadastro separado.</p>
+
+        <div id="customers-state" class="state-banner">
+          <div class="spinner"></div>
+          <p>Carregando clientes...</p>
+        </div>
+
+        <div class="data-table-wrap hidden" id="customers-table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>Telefone</th>
+                <th>Pedidos</th>
+                <th>Total gasto</th>
+                <th>Último pedido</th>
+              </tr>
+            </thead>
+            <tbody id="customers-table-body"></tbody>
           </table>
         </div>
       </section>

@@ -172,6 +172,7 @@
     if (viewName === 'dashboard') loadDashboard();
     else if (viewName === 'products') loadProductsAdmin();
     else if (viewName === 'orders') loadOrders();
+    else if (viewName === 'customers') loadCustomers();
     else if (viewName === 'settings') loadSettingsAdmin();
   }
 
@@ -475,6 +476,82 @@
       `;
       body.appendChild(tr);
     });
+  }
+
+  // -- Clientes -----------------------------------------------------------
+  // Não existe cadastro de cliente: a lista é montada agrupando os pedidos
+  // pelo telefone informado no checkout.
+
+  function computeCustomers(orders) {
+    const map = new Map();
+
+    orders.forEach((order) => {
+      const phone = (order.customer_phone || '').trim();
+      const key = phone || `sem-telefone-${order.id}`;
+
+      if (!map.has(key)) {
+        map.set(key, {
+          name: order.customer_name || '—',
+          phone: phone || '—',
+          total: 0,
+          orderCount: 0,
+          lastOrderAt: order.created_at,
+        });
+      }
+
+      const entry = map.get(key);
+      entry.total += Number(order.total);
+      entry.orderCount += 1;
+      if (order.created_at > entry.lastOrderAt) {
+        entry.lastOrderAt = order.created_at;
+        entry.name = order.customer_name || entry.name;
+      }
+    });
+
+    return [...map.values()].sort((a, b) => b.total - a.total);
+  }
+
+  async function loadCustomers() {
+    const stateBanner = document.getElementById('customers-state');
+    const tableWrap = document.getElementById('customers-table-wrap');
+
+    stateBanner.classList.remove('hidden', 'error');
+    stateBanner.innerHTML = '<div class="spinner"></div><p>Carregando clientes...</p>';
+    tableWrap.classList.add('hidden');
+
+    try {
+      const orders = await fetchOrders();
+      renderCustomersTable(computeCustomers(orders));
+      stateBanner.classList.add('hidden');
+      tableWrap.classList.remove('hidden');
+    } catch (err) {
+      console.error('Erro ao carregar clientes:', err);
+      stateBanner.innerHTML = '<p>Não foi possível carregar os clientes.</p>';
+      stateBanner.classList.add('error');
+    }
+  }
+
+  function renderCustomersTable(customers) {
+    const body = document.getElementById('customers-table-body');
+
+    if (customers.length === 0) {
+      body.innerHTML = '<tr><td colspan="5">Nenhum cliente ainda — aparece aqui assim que o primeiro pedido for feito.</td></tr>';
+      return;
+    }
+
+    body.innerHTML = customers
+      .map(
+        (c) => `
+          <tr>
+            <td>${escapeHtml(c.name)}</td>
+            <td>${escapeHtml(c.phone)}</td>
+            <td>${c.orderCount}</td>
+            <td>${formatBRL(c.total)}</td>
+            <td>${formatDate(c.lastOrderAt)}</td>
+          </tr>
+        `
+      )
+      .join('');
   }
 
   // -- Configurações ----------------------------------------------------
