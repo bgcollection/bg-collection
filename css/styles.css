@@ -343,6 +343,12 @@ input, select, textarea {
   letter-spacing: 0.02em;
 }
 
+.store-header__logo {
+  height: 42px;
+  width: auto;
+  display: block;
+}
+
 .store-header__actions {
   display: flex;
   align-items: center;
@@ -544,8 +550,8 @@ input, select, textarea {
    ---------------------------------------------------------------------------- */
 .product-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 14px;
   padding: 24px 20px 60px;
   max-width: var(--max-width);
   margin: 0 auto;
@@ -1393,9 +1399,9 @@ input, select, textarea {
 }
 
 .lightbox-img {
-  max-width: 68vw;
-  max-height: 62vh;
-  object-fit: contain;
+  width: min(68vw, 520px);
+  height: min(62vh, 520px);
+  object-fit: cover;
   border-radius: var(--radius-md);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
 }
@@ -1474,8 +1480,8 @@ input, select, textarea {
 
 @media (max-width: 640px) {
   .lightbox-img {
-    max-width: 92vw;
-    max-height: 52vh;
+    width: min(92vw, 380px);
+    height: min(52vh, 380px);
   }
 
   .lightbox-arrow {
