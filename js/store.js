@@ -88,18 +88,22 @@
     document.getElementById('footer-year').textContent = new Date().getFullYear();
 
     const instagramLink = document.getElementById('instagram-link');
-    if (s.instagram_handle) {
-      const handle = s.instagram_handle.replace(/^@/, '');
-      instagramLink.href = `https://instagram.com/${encodeURIComponent(handle)}`;
-    } else {
-      instagramLink.style.display = 'none';
+    if (instagramLink) {
+      if (s.instagram_handle) {
+        const handle = s.instagram_handle.replace(/^@/, '');
+        instagramLink.href = `https://instagram.com/${encodeURIComponent(handle)}`;
+      } else {
+        instagramLink.style.display = 'none';
+      }
     }
 
     const whatsappLink = document.getElementById('whatsapp-link');
-    if (s.whatsapp_number) {
-      whatsappLink.href = `https://wa.me/${s.whatsapp_number.replace(/\D/g, '')}`;
-    } else {
-      whatsappLink.style.display = 'none';
+    if (whatsappLink) {
+      if (s.whatsapp_number) {
+        whatsappLink.href = `https://wa.me/${s.whatsapp_number.replace(/\D/g, '')}`;
+      } else {
+        whatsappLink.style.display = 'none';
+      }
     }
   }
 
@@ -428,11 +432,9 @@
   function renderCart() {
     const itemsWrap = document.getElementById('cart-items');
     const footer = document.getElementById('cart-footer');
-    const emptyMsg = document.getElementById('cart-empty');
 
     if (state.cart.length === 0) {
-      itemsWrap.innerHTML = '';
-      itemsWrap.appendChild(emptyMsg);
+      itemsWrap.innerHTML = '<p class="state-banner" id="cart-empty">Seu carrinho está vazio.</p>';
       footer.style.display = 'none';
       return;
     }
