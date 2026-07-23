@@ -193,7 +193,7 @@ create policy "products_delete_auth"
   to authenticated
   using (true);
 
--- orders: qualquer visitante cria pedido; só usuário autenticado lê
+-- orders: qualquer visitante cria pedido; só usuário autenticado lê/edita/exclui
 drop policy if exists "orders_insert_public" on public.orders;
 create policy "orders_insert_public"
   on public.orders for insert
@@ -203,6 +203,19 @@ create policy "orders_insert_public"
 drop policy if exists "orders_select_auth" on public.orders;
 create policy "orders_select_auth"
   on public.orders for select
+  to authenticated
+  using (true);
+
+drop policy if exists "orders_update_auth" on public.orders;
+create policy "orders_update_auth"
+  on public.orders for update
+  to authenticated
+  using (true)
+  with check (true);
+
+drop policy if exists "orders_delete_auth" on public.orders;
+create policy "orders_delete_auth"
+  on public.orders for delete
   to authenticated
   using (true);
 
