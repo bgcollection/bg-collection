@@ -258,20 +258,22 @@
         <div class="product-card__body">
           <div class="product-card__name">${escapeHtml(product.name)}</div>
           <div class="product-card__price">${formatBRL(product.price)}</div>
-          <button class="btn btn-primary btn-sm product-card__add" ${outOfStock ? 'disabled' : ''}>
-            ${outOfStock ? 'Esgotado' : 'Adicionar'}
+          <button class="btn btn-sm product-card__add ${outOfStock ? 'btn-outline' : 'btn-primary'}">
+            ${outOfStock ? 'Encomendar' : 'Adicionar'}
           </button>
         </div>
       `;
 
       card.querySelector('.product-card__photo-wrap').addEventListener('click', () => openLightbox(product));
 
-      if (!outOfStock) {
-        card.querySelector('.product-card__add').addEventListener('click', (e) => {
-          e.stopPropagation();
+      card.querySelector('.product-card__add').addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (outOfStock) {
+          openBackorder(product);
+        } else {
           addToCart(product);
-        });
-      }
+        }
+      });
 
       grid.appendChild(card);
     });
@@ -288,11 +290,15 @@
 
     const addBtn = document.getElementById('lightbox-addcart');
     const outOfStock = product.stock_quantity <= 0;
-    addBtn.disabled = outOfStock;
-    addBtn.textContent = outOfStock ? 'Esgotado' : 'Adicionar ao carrinho';
+    addBtn.disabled = false;
+    addBtn.textContent = outOfStock ? 'Encomendar' : 'Adicionar ao carrinho';
     addBtn.onclick = () => {
-      addToCart(product);
-      closeLightbox();
+      if (outOfStock) {
+        openBackorder(product);
+      } else {
+        addToCart(product);
+        closeLightbox();
+      }
     };
 
     renderLightbox();
@@ -304,6 +310,17 @@
     document.getElementById('lightbox-overlay').classList.add('hidden');
     document.body.style.overflow = '';
     state.lightboxProduct = null;
+  }
+
+  function openBackorder(product) {
+    if (!state.settings || !state.settings.whatsapp_number) {
+      showToast('A loja ainda não configurou um número de WhatsApp. Tente novamente mais tarde.', 'error');
+      return;
+    }
+    const message = `Olá! O produto "${product.name}" (${formatBRL(product.price)}) está esgotado. Gostaria de encomendar.`;
+    const waNumber = state.settings.whatsapp_number.replace(/\D/g, '');
+    const waUrl = `https://wa.me/${waNumber}?text=${encodeURIComponent(message)}`;
+    window.open(waUrl, '_blank', 'noopener');
   }
 
   function renderLightbox() {
@@ -502,20 +519,6 @@
     return lines.join('\n');
   }
 
-  async function decrementStockForCart(cartItems) {
-    for (const item of cartItems) {
-      try {
-        const { error } = await window.sbClient.rpc('decrement_stock', {
-          product_id: item.productId,
-          qty: item.quantity,
-        });
-        if (error) throw error;
-      } catch (err) {
-        console.error('Erro ao descontar estoque de', item.name, err);
-      }
-    }
-  }
-
   async function submitCheckout(event) {
     event.preventDefault();
 
@@ -552,8 +555,6 @@
     try {
       const { error } = await window.sbClient.from('orders').insert(orderPayload);
       if (error) throw error;
-
-      await decrementStockForCart(state.cart);
 
       const message = buildWhatsappMessage(orderPayload, name);
       const waNumber = state.settings.whatsapp_number.replace(/\D/g, '');

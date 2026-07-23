@@ -64,8 +64,20 @@ create table if not exists public.orders (
   customer_phone text,
   items jsonb not null,
   total numeric(10,2) not null check (total >= 0),
+  status text not null default 'pending' check (status in ('pending', 'sold', 'cancelled')),
   created_at timestamptz not null default now()
 );
+
+-- Migração: bancos criados antes do status de pedido (pendente/vendido/cancelado).
+alter table public.orders add column if not exists status text not null default 'pending';
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'orders_status_check'
+  ) then
+    alter table public.orders add constraint orders_status_check check (status in ('pending', 'sold', 'cancelled'));
+  end if;
+end $$;
 
 create index if not exists orders_created_at_idx on public.orders (created_at);
 
@@ -108,10 +120,11 @@ create trigger products_set_updated_at
   for each row execute function public.set_updated_at();
 
 -- ----------------------------------------------------------------------------
--- Desconto de estoque ao finalizar pedido
--- SECURITY DEFINER: roda com privilégio elevado para permitir que o cliente
--- anônimo (que não tem permissão de UPDATE em products via RLS) desconte
--- estoque só através desta função, de forma atômica e nunca abaixo de zero.
+-- Ajuste de estoque (usado pelo admin ao marcar/desmarcar um pedido como
+-- vendido). SECURITY DEFINER: roda com privilégio elevado porque quem chama
+-- é um usuário autenticado do admin, que não tem UPDATE direto em products
+-- fora do CRUD normal — o ajuste de estoque por pedido passa só por aqui,
+-- de forma atômica e nunca abaixo de zero.
 -- ----------------------------------------------------------------------------
 create or replace function public.decrement_stock(product_id uuid, qty integer)
 returns void
@@ -126,7 +139,21 @@ begin
 end;
 $$;
 
-grant execute on function public.decrement_stock(uuid, integer) to anon, authenticated;
+create or replace function public.increment_stock(product_id uuid, qty integer)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update public.products
+  set stock_quantity = stock_quantity + qty
+  where id = product_id;
+end;
+$$;
+
+grant execute on function public.decrement_stock(uuid, integer) to authenticated;
+grant execute on function public.increment_stock(uuid, integer) to authenticated;
 
 drop trigger if exists store_settings_set_updated_at on public.store_settings;
 create trigger store_settings_set_updated_at

@@ -456,7 +456,7 @@
     const body = document.getElementById('orders-table-body');
 
     if (state.orders.length === 0) {
-      body.innerHTML = '<tr><td colspan="5">Nenhum pedido registrado ainda.</td></tr>';
+      body.innerHTML = '<tr><td colspan="6">Nenhum pedido registrado ainda.</td></tr>';
       return;
     }
 
@@ -465,6 +465,7 @@
       const itemsSummary = (order.items || [])
         .map((item) => `${item.quantity}x ${item.name}`)
         .join(', ');
+      const status = order.status || 'pending';
 
       const tr = document.createElement('tr');
       tr.innerHTML = `
@@ -473,9 +474,54 @@
         <td>${escapeHtml(order.customer_phone || '—')}</td>
         <td>${escapeHtml(itemsSummary)}</td>
         <td>${formatBRL(order.total)}</td>
+        <td>
+          <select data-action="status" style="font-size:0.8rem;border:1px solid var(--border);background:var(--bg2);padding:6px 8px;border-radius:var(--radius-sm);font-family:'Jost',sans-serif;">
+            <option value="pending" ${status === 'pending' ? 'selected' : ''}>Pendente</option>
+            <option value="sold" ${status === 'sold' ? 'selected' : ''}>Vendido</option>
+            <option value="cancelled" ${status === 'cancelled' ? 'selected' : ''}>Cancelado</option>
+          </select>
+        </td>
       `;
+      tr.querySelector('[data-action="status"]').addEventListener('change', (e) => handleOrderStatusChange(order, e.target.value));
       body.appendChild(tr);
     });
+  }
+
+  async function handleOrderStatusChange(order, newStatus) {
+    const previousStatus = order.status || 'pending';
+    if (newStatus === previousStatus) return;
+
+    try {
+      const { error } = await window.sbClient.from('orders').update({ status: newStatus }).eq('id', order.id);
+      if (error) throw error;
+      order.status = newStatus;
+
+      if (newStatus === 'sold' && previousStatus !== 'sold') {
+        for (const item of order.items || []) {
+          const { error: stockError } = await window.sbClient.rpc('decrement_stock', {
+            product_id: item.product_id,
+            qty: item.quantity,
+          });
+          if (stockError) console.error('Erro ao descontar estoque de', item.name, stockError);
+        }
+        showToast('Pedido marcado como vendido — estoque atualizado.', 'success');
+      } else if (previousStatus === 'sold' && newStatus !== 'sold') {
+        for (const item of order.items || []) {
+          const { error: stockError } = await window.sbClient.rpc('increment_stock', {
+            product_id: item.product_id,
+            qty: item.quantity,
+          });
+          if (stockError) console.error('Erro ao restaurar estoque de', item.name, stockError);
+        }
+        showToast('Status do pedido atualizado — estoque restaurado.', 'success');
+      } else {
+        showToast('Status do pedido atualizado.', 'success');
+      }
+    } catch (err) {
+      console.error('Erro ao atualizar status do pedido:', err);
+      showToast('Não foi possível atualizar o pedido.', 'error');
+      renderOrdersTable();
+    }
   }
 
   // -- Clientes -----------------------------------------------------------
