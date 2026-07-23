@@ -20,6 +20,7 @@
     newPhotoFiles: [],
     isFeatured: false,
     deleteTargetId: null,
+    deleteTargetType: null,
     chartInstance: null,
   };
 
@@ -392,13 +393,23 @@
 
   function openConfirmDelete(productId, productName) {
     state.deleteTargetId = productId;
+    state.deleteTargetType = 'product';
     document.getElementById('confirm-modal-text').textContent =
       `Tem certeza que deseja excluir "${productName}"? Essa ação não pode ser desfeita.`;
     document.getElementById('confirm-modal').classList.remove('hidden');
   }
 
+  function openConfirmDeleteOrder(orderId, orderLabel) {
+    state.deleteTargetId = orderId;
+    state.deleteTargetType = 'order';
+    document.getElementById('confirm-modal-text').textContent =
+      `Tem certeza que deseja excluir o pedido de "${orderLabel}"? Essa ação não pode ser desfeita.`;
+    document.getElementById('confirm-modal').classList.remove('hidden');
+  }
+
   function closeConfirmDelete() {
     state.deleteTargetId = null;
+    state.deleteTargetType = null;
     document.getElementById('confirm-modal').classList.add('hidden');
   }
 
@@ -407,15 +418,22 @@
     const btn = document.getElementById('confirm-accept');
     setButtonLoading(btn, 'Excluindo...');
 
+    const isOrder = state.deleteTargetType === 'order';
+    const table = isOrder ? 'orders' : 'products';
+
     try {
-      const { error } = await window.sbClient.from('products').delete().eq('id', state.deleteTargetId);
+      const { error } = await window.sbClient.from(table).delete().eq('id', state.deleteTargetId);
       if (error) throw error;
-      showToast('Produto excluído.', 'success');
+      showToast(isOrder ? 'Pedido excluído.' : 'Produto excluído.', 'success');
       closeConfirmDelete();
-      await loadProductsAdmin();
+      if (isOrder) {
+        await loadOrders();
+      } else {
+        await loadProductsAdmin();
+      }
     } catch (err) {
-      console.error('Erro ao excluir produto:', err);
-      showToast('Não foi possível excluir o produto.', 'error');
+      console.error('Erro ao excluir:', err);
+      showToast(isOrder ? 'Não foi possível excluir o pedido.' : 'Não foi possível excluir o produto.', 'error');
     } finally {
       resetButtonLoading(btn);
     }
@@ -456,7 +474,7 @@
     const body = document.getElementById('orders-table-body');
 
     if (state.orders.length === 0) {
-      body.innerHTML = '<tr><td colspan="6">Nenhum pedido registrado ainda.</td></tr>';
+      body.innerHTML = '<tr><td colspan="7">Nenhum pedido registrado ainda.</td></tr>';
       return;
     }
 
@@ -481,8 +499,12 @@
             <option value="cancelled" ${status === 'cancelled' ? 'selected' : ''}>Cancelado</option>
           </select>
         </td>
+        <td>
+          <button class="btn btn-danger btn-sm" data-action="delete">Excluir</button>
+        </td>
       `;
       tr.querySelector('[data-action="status"]').addEventListener('change', (e) => handleOrderStatusChange(order, e.target.value));
+      tr.querySelector('[data-action="delete"]').addEventListener('click', () => openConfirmDeleteOrder(order.id, order.customer_name || order.customer_phone || 'cliente'));
       body.appendChild(tr);
     });
   }
