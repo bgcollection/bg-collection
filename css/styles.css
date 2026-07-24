@@ -1530,7 +1530,7 @@ input, select, textarea {
 .lightbox-img {
   width: min(68vw, 520px);
   height: min(62vh, 520px);
-  object-fit: cover;
+  object-fit: contain;
   border-radius: var(--radius-md);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
 }
