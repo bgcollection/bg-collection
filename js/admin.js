@@ -21,6 +21,7 @@
     isFeatured: false,
     deleteTargetId: null,
     deleteTargetType: null,
+    deleteTargetOrder: null,
     chartInstance: null,
   };
 
@@ -399,17 +400,21 @@
     document.getElementById('confirm-modal').classList.remove('hidden');
   }
 
-  function openConfirmDeleteOrder(orderId, orderLabel) {
-    state.deleteTargetId = orderId;
+  function openConfirmDeleteOrder(order) {
+    state.deleteTargetId = order.id;
     state.deleteTargetType = 'order';
+    state.deleteTargetOrder = order;
+    const orderLabel = order.customer_name || order.customer_phone || 'cliente';
+    const stockNote = order.status === 'sold' ? ' O estoque descontado por ele será restaurado.' : '';
     document.getElementById('confirm-modal-text').textContent =
-      `Tem certeza que deseja excluir o pedido de "${orderLabel}"? Essa ação não pode ser desfeita.`;
+      `Tem certeza que deseja excluir o pedido de "${orderLabel}"? Essa ação não pode ser desfeita.${stockNote}`;
     document.getElementById('confirm-modal').classList.remove('hidden');
   }
 
   function closeConfirmDelete() {
     state.deleteTargetId = null;
     state.deleteTargetType = null;
+    state.deleteTargetOrder = null;
     document.getElementById('confirm-modal').classList.add('hidden');
   }
 
@@ -420,11 +425,25 @@
 
     const isOrder = state.deleteTargetType === 'order';
     const table = isOrder ? 'orders' : 'products';
+    const orderToDelete = state.deleteTargetOrder;
 
     try {
       const { error } = await window.sbClient.from(table).delete().eq('id', state.deleteTargetId);
       if (error) throw error;
-      showToast(isOrder ? 'Pedido excluído.' : 'Produto excluído.', 'success');
+
+      if (isOrder && orderToDelete && orderToDelete.status === 'sold') {
+        for (const item of orderToDelete.items || []) {
+          const { error: stockError } = await window.sbClient.rpc('increment_stock', {
+            product_id: item.product_id,
+            qty: item.quantity,
+          });
+          if (stockError) console.error('Erro ao restaurar estoque de', item.name, stockError);
+        }
+        showToast('Pedido excluído — estoque restaurado.', 'success');
+      } else {
+        showToast(isOrder ? 'Pedido excluído.' : 'Produto excluído.', 'success');
+      }
+
       closeConfirmDelete();
       if (isOrder) {
         await loadOrders();
@@ -484,13 +503,16 @@
         .map((item) => `${item.quantity}x ${item.name}`)
         .join(', ');
       const status = order.status || 'pending';
+      const noteHtml = order.note
+        ? `<div style="margin-top:4px;font-size:0.78rem;color:var(--gold2);">⭐ ${escapeHtml(order.note)}</div>`
+        : '';
 
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td>${formatDate(order.created_at)}</td>
         <td>${escapeHtml(order.customer_name || '—')}</td>
         <td>${escapeHtml(order.customer_phone || '—')}</td>
-        <td>${escapeHtml(itemsSummary)}</td>
+        <td>${escapeHtml(itemsSummary)}${noteHtml}</td>
         <td>${formatBRL(order.total)}</td>
         <td>
           <select data-action="status" style="font-size:0.8rem;border:1px solid var(--border);background:var(--bg2);padding:6px 8px;border-radius:var(--radius-sm);font-family:'Jost',sans-serif;">
@@ -504,7 +526,7 @@
         </td>
       `;
       tr.querySelector('[data-action="status"]').addEventListener('change', (e) => handleOrderStatusChange(order, e.target.value));
-      tr.querySelector('[data-action="delete"]').addEventListener('click', () => openConfirmDeleteOrder(order.id, order.customer_name || order.customer_phone || 'cliente'));
+      tr.querySelector('[data-action="delete"]').addEventListener('click', () => openConfirmDeleteOrder(order));
       body.appendChild(tr);
     });
   }

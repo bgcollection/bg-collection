@@ -65,11 +65,13 @@ create table if not exists public.orders (
   items jsonb not null,
   total numeric(10,2) not null check (total >= 0),
   status text not null default 'pending' check (status in ('pending', 'sold', 'cancelled')),
+  note text,
   created_at timestamptz not null default now()
 );
 
 -- Migração: bancos criados antes do status de pedido (pendente/vendido/cancelado).
 alter table public.orders add column if not exists status text not null default 'pending';
+alter table public.orders add column if not exists note text;
 do $$
 begin
   if not exists (

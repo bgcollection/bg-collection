@@ -17,6 +17,7 @@
     cart: loadCart(),
     lightboxProduct: null,
     lightboxIndex: 0,
+    pendingBackorderProduct: null,
   };
 
   // -- Helpers --------------------------------------------------------------
@@ -317,6 +318,17 @@
       showToast('A loja ainda não configurou um número de WhatsApp. Tente novamente mais tarde.', 'error');
       return;
     }
+
+    // Se já tem itens no carrinho, junta o pedido de encomenda no mesmo
+    // checkout/mensagem em vez de abrir uma conversa separada no WhatsApp.
+    if (state.cart.length > 0) {
+      closeLightbox();
+      state.pendingBackorderProduct = product;
+      openCheckout();
+      showToast(`"${product.name}" será incluído junto com o resto do seu pedido.`, 'success');
+      return;
+    }
+
     const message = `Olá! O produto "${product.name}" (${formatBRL(product.price)}) está esgotado. Gostaria de encomendar.`;
     const waNumber = state.settings.whatsapp_number.replace(/\D/g, '');
     const waUrl = `https://wa.me/${waNumber}?text=${encodeURIComponent(message)}`;
@@ -508,6 +520,7 @@
 
   function closeCheckout() {
     document.getElementById('checkout-modal').classList.add('hidden');
+    state.pendingBackorderProduct = null;
   }
 
   function buildWhatsappMessage(order, customerName) {
@@ -516,6 +529,9 @@
       lines.push(`• ${item.quantity}x ${item.name} — ${formatBRL(item.price * item.quantity)}`);
     });
     lines.push('', `Total: ${formatBRL(order.total)}`);
+    if (order.note) {
+      lines.push('', order.note);
+    }
     return lines.join('\n');
   }
 
@@ -536,6 +552,7 @@
       return;
     }
 
+    const backorderProduct = state.pendingBackorderProduct;
     const orderPayload = {
       customer_name: name,
       customer_phone: phone,
@@ -547,6 +564,9 @@
         category: item.category,
       })),
       total: cartTotal(),
+      note: backorderProduct
+        ? `Também gostaria de encomendar (esgotado no momento): ${backorderProduct.name} — ${formatBRL(backorderProduct.price)}`
+        : null,
     };
 
     submitBtn.disabled = true;
@@ -561,6 +581,7 @@
       const waUrl = `https://wa.me/${waNumber}?text=${encodeURIComponent(message)}`;
 
       state.cart = [];
+      state.pendingBackorderProduct = null;
       saveCart();
       renderCartBadge();
       closeCheckout();
