@@ -194,7 +194,7 @@ input, select, textarea {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  border: none;
+  border: 1px solid transparent;
   border-radius: var(--radius-sm);
   padding: 12px 26px;
   font-size: 0.8rem;
