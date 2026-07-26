@@ -7,8 +7,9 @@
 (function () {
   'use strict';
 
-  const CATEGORIES = ['Bolsas', 'Pulseiras', 'Relógios', 'Brincos', 'Cintos', 'Lenços'];
+  const CATEGORIES = ['Bolsas', 'Pulseiras', 'Relógios', 'Brincos', 'Cintos', 'Lenços', 'Colares'];
   const CART_STORAGE_KEY = 'bg_cart_v1';
+  const SESSION_STORAGE_KEY = 'bg_session_id_v1';
 
   const state = {
     settings: null,
@@ -51,6 +52,48 @@
     } catch (err) {
       console.error('Não foi possível salvar o carrinho:', err);
     }
+    syncCartSession();
+  }
+
+  // -- Métricas: acessos e carrinho não finalizado (anônimo, sem PII) -------
+
+  function getSessionId() {
+    let id = localStorage.getItem(SESSION_STORAGE_KEY);
+    if (!id) {
+      id = window.crypto && window.crypto.randomUUID ? window.crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      localStorage.setItem(SESSION_STORAGE_KEY, id);
+    }
+    return id;
+  }
+
+  function trackVisit() {
+    window.sbClient
+      .from('site_visits')
+      .insert({ session_id: getSessionId() })
+      .then(({ error }) => {
+        if (error) console.error('Não foi possível registrar a visita:', error);
+      });
+  }
+
+  let cartSyncTimer = null;
+  function syncCartSession() {
+    clearTimeout(cartSyncTimer);
+    cartSyncTimer = setTimeout(async () => {
+      const sessionId = getSessionId();
+      try {
+        if (state.cart.length === 0) {
+          await window.sbClient.from('cart_sessions').delete().eq('session_id', sessionId);
+        } else {
+          await window.sbClient.from('cart_sessions').upsert({
+            session_id: sessionId,
+            items: state.cart,
+            updated_at: new Date().toISOString(),
+          });
+        }
+      } catch (err) {
+        console.error('Não foi possível sincronizar o carrinho:', err);
+      }
+    }, 1500);
   }
 
   function escapeHtml(str) {
@@ -646,6 +689,7 @@
   document.addEventListener('DOMContentLoaded', () => {
     bindEvents();
     renderCartBadge();
+    trackVisit();
 
     const minSplashTime = new Promise((resolve) => setTimeout(resolve, 1100));
     Promise.all([loadSettings(), loadProducts(), minSplashTime]).finally(() => {

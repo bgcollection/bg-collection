@@ -36,6 +36,7 @@
       <button class="admin-nav__link" data-view="products">👜 Produtos</button>
       <button class="admin-nav__link" data-view="orders">📦 Pedidos</button>
       <button class="admin-nav__link" data-view="customers">👥 Clientes</button>
+      <button class="admin-nav__link" data-view="metrics">📈 Métricas</button>
       <button class="admin-nav__link" data-view="settings">⚙️ Configurações</button>
       <div class="admin-nav__spacer"></div>
       <button class="admin-nav__link" id="logout-btn">🚪 Sair</button>
@@ -155,6 +156,19 @@
         </div>
       </section>
 
+      <!-- ---------- MÉTRICAS ---------- -->
+      <section id="view-metrics" class="admin-view hidden">
+        <div class="admin-topbar"><h2>Métricas</h2></div>
+        <p class="field-hint" style="margin-bottom:16px;">Acessos e carrinhos são anônimos (identificados só por um ID salvo no navegador do visitante, sem nome/telefone).</p>
+
+        <div class="stat-grid" id="metrics-stat-grid"></div>
+
+        <div class="panel">
+          <h3>Carrinhos com produto parado (não finalizaram)</h3>
+          <ul class="mini-list" id="abandoned-carts-list"></ul>
+        </div>
+      </section>
+
       <!-- ---------- CONFIGURAÇÕES ---------- -->
       <section id="view-settings" class="admin-view hidden">
         <div class="admin-topbar"><h2>Configurações da loja</h2></div>
@@ -206,6 +220,7 @@
                 <option value="Brincos">Brincos</option>
                 <option value="Cintos">Cintos</option>
                 <option value="Lenços">Lenços</option>
+                <option value="Colares">Colares</option>
               </select>
             </div>
             <div class="field">

@@ -13,7 +13,7 @@ create extension if not exists "pgcrypto";
 create table if not exists public.products (
   id uuid primary key default gen_random_uuid(),
   name text not null,
-  category text not null check (category in ('Bolsas', 'Pulseiras', 'Relógios', 'Brincos', 'Cintos', 'Lenços')),
+  category text not null check (category in ('Bolsas', 'Pulseiras', 'Relógios', 'Brincos', 'Cintos', 'Lenços', 'Colares')),
   price numeric(10,2) not null check (price >= 0),
   cost_price numeric(10,2) not null default 0 check (cost_price >= 0),
   stock_quantity integer not null default 0 check (stock_quantity >= 0),
@@ -47,6 +47,11 @@ end $$;
 -- Migração: bancos criados antes do destaque-por-produto e dos badges.
 alter table public.products add column if not exists badge text;
 alter table public.products add column if not exists is_featured boolean not null default false;
+
+-- Migração: bancos criados antes da categoria "Colares".
+alter table public.products drop constraint if exists products_category_check;
+alter table public.products add constraint products_category_check
+  check (category in ('Bolsas', 'Pulseiras', 'Relógios', 'Brincos', 'Cintos', 'Lenços', 'Colares'));
 
 create index if not exists products_category_idx on public.products (category);
 create index if not exists products_is_active_idx on public.products (is_active);
@@ -102,6 +107,32 @@ on conflict (id) do nothing;
 -- Migração: o destaque da home passou a ser um produto marcado (is_featured),
 -- não mais uma foto avulsa nas configurações.
 alter table public.store_settings drop column if exists featured_photo_url;
+
+-- ----------------------------------------------------------------------------
+-- Tabela: site_visits
+-- Um registro por carregamento de página da vitrine, usado só pra contar
+-- acessos/visitantes no painel admin (sem nenhum dado pessoal).
+-- ----------------------------------------------------------------------------
+create table if not exists public.site_visits (
+  id uuid primary key default gen_random_uuid(),
+  session_id text not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists site_visits_created_at_idx on public.site_visits (created_at);
+
+-- ----------------------------------------------------------------------------
+-- Tabela: cart_sessions
+-- Snapshot do carrinho de cada visitante (por session_id anônimo salvo no
+-- localStorage), atualizado enquanto ele tem itens e ainda não finalizou.
+-- A linha é apagada quando o carrinho esvazia ou o pedido é concluído —
+-- então "existe" = carrinho com produto parado, sem pedido feito.
+-- ----------------------------------------------------------------------------
+create table if not exists public.cart_sessions (
+  session_id text primary key,
+  items jsonb not null,
+  updated_at timestamptz not null default now()
+);
 
 -- ----------------------------------------------------------------------------
 -- updated_at automático
@@ -234,6 +265,52 @@ create policy "store_settings_update_auth"
   to authenticated
   using (true)
   with check (true);
+
+-- site_visits: qualquer visitante registra a própria visita; só o admin lê
+-- (write-only pro público — não dá pra listar/ler visitas de outra pessoa).
+alter table public.site_visits enable row level security;
+
+drop policy if exists "site_visits_insert_public" on public.site_visits;
+create policy "site_visits_insert_public"
+  on public.site_visits for insert
+  to anon, authenticated
+  with check (true);
+
+drop policy if exists "site_visits_select_auth" on public.site_visits;
+create policy "site_visits_select_auth"
+  on public.site_visits for select
+  to authenticated
+  using (true);
+
+-- cart_sessions: qualquer visitante grava/atualiza/apaga o próprio carrinho
+-- (identificado pelo session_id aleatório dele, sem PII); só o admin lê a
+-- lista completa pra contar carrinhos abandonados.
+alter table public.cart_sessions enable row level security;
+
+drop policy if exists "cart_sessions_insert_public" on public.cart_sessions;
+create policy "cart_sessions_insert_public"
+  on public.cart_sessions for insert
+  to anon, authenticated
+  with check (true);
+
+drop policy if exists "cart_sessions_update_public" on public.cart_sessions;
+create policy "cart_sessions_update_public"
+  on public.cart_sessions for update
+  to anon, authenticated
+  using (true)
+  with check (true);
+
+drop policy if exists "cart_sessions_delete_public" on public.cart_sessions;
+create policy "cart_sessions_delete_public"
+  on public.cart_sessions for delete
+  to anon, authenticated
+  using (true);
+
+drop policy if exists "cart_sessions_select_auth" on public.cart_sessions;
+create policy "cart_sessions_select_auth"
+  on public.cart_sessions for select
+  to authenticated
+  using (true);
 
 -- ----------------------------------------------------------------------------
 -- Storage: bucket de fotos dos produtos

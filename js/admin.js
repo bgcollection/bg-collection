@@ -7,7 +7,7 @@
 (function () {
   'use strict';
 
-  const CATEGORIES = ['Bolsas', 'Pulseiras', 'Relógios', 'Brincos', 'Cintos', 'Lenços'];
+  const CATEGORIES = ['Bolsas', 'Pulseiras', 'Relógios', 'Brincos', 'Cintos', 'Lenços', 'Colares'];
   const PHOTO_MAX_DIMENSION = 1000;
   const PHOTO_QUALITY = 0.8;
 
@@ -175,6 +175,7 @@
     else if (viewName === 'products') loadProductsAdmin();
     else if (viewName === 'orders') loadOrders();
     else if (viewName === 'customers') loadCustomers();
+    else if (viewName === 'metrics') loadMetrics();
     else if (viewName === 'settings') loadSettingsAdmin();
   }
 
@@ -642,6 +643,89 @@
         `
       )
       .join('');
+  }
+
+  // -- Métricas -----------------------------------------------------------
+
+  function startOfMonthISO() {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth(), 1).toISOString();
+  }
+
+  async function fetchVisitsThisMonth() {
+    const { data, error } = await window.sbClient
+      .from('site_visits')
+      .select('session_id')
+      .gte('created_at', startOfMonthISO());
+    if (error) throw error;
+    return data;
+  }
+
+  async function fetchAbandonedCarts() {
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const { data, error } = await window.sbClient
+      .from('cart_sessions')
+      .select('session_id, items, updated_at')
+      .gte('updated_at', thirtyDaysAgo)
+      .order('updated_at', { ascending: false });
+    if (error) throw error;
+    return data;
+  }
+
+  function computeMetrics(visits, cartSessions) {
+    return {
+      totalVisits: visits.length,
+      uniqueVisitors: new Set(visits.map((v) => v.session_id)).size,
+      cartSessions,
+    };
+  }
+
+  function timeAgo(iso) {
+    const diffMin = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+    if (diffMin < 60) return `há ${diffMin} min`;
+    const diffHours = Math.round(diffMin / 60);
+    if (diffHours < 24) return `há ${diffHours}h`;
+    return `há ${Math.round(diffHours / 24)}d`;
+  }
+
+  async function loadMetrics() {
+    try {
+      const [visits, cartSessions] = await Promise.all([fetchVisitsThisMonth(), fetchAbandonedCarts()]);
+      renderMetrics(computeMetrics(visits, cartSessions));
+    } catch (err) {
+      console.error('Erro ao carregar métricas:', err);
+      showToast('Não foi possível carregar as métricas.', 'error');
+    }
+  }
+
+  function renderMetrics(data) {
+    const statGrid = document.getElementById('metrics-stat-grid');
+    statGrid.innerHTML = `
+      <div class="stat-card">
+        <div class="stat-card__label">Acessos no mês</div>
+        <div class="stat-card__value">${data.totalVisits}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card__label">Visitantes únicos no mês</div>
+        <div class="stat-card__value">${data.uniqueVisitors}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card__label">Carrinhos parados (30 dias)</div>
+        <div class="stat-card__value">${data.cartSessions.length}</div>
+      </div>
+    `;
+
+    const list = document.getElementById('abandoned-carts-list');
+    list.innerHTML = data.cartSessions.length
+      ? data.cartSessions
+          .map((cs) => {
+            const items = cs.items || [];
+            const itemCount = items.reduce((sum, i) => sum + (i.quantity || 1), 0);
+            const total = items.reduce((sum, i) => sum + (Number(i.price) || 0) * (i.quantity || 1), 0);
+            return `<li>${itemCount} item(ns) — ${formatBRL(total)} <span class="qty">${timeAgo(cs.updated_at)}</span></li>`;
+          })
+          .join('')
+      : '<li>Nenhum carrinho parado no momento.</li>';
   }
 
   // -- Configurações ----------------------------------------------------
