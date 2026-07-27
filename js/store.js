@@ -19,6 +19,7 @@
     lightboxProduct: null,
     lightboxIndex: 0,
     pendingBackorderProduct: null,
+    appliedCoupon: null,
   };
 
   // -- Helpers --------------------------------------------------------------
@@ -486,8 +487,54 @@
     renderCartBadge();
   }
 
-  function cartTotal() {
+  function cartSubtotal() {
     return state.cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  }
+
+  function cartDiscount() {
+    if (!state.appliedCoupon) return 0;
+    const subtotal = cartSubtotal();
+    const coupon = state.appliedCoupon;
+    const raw = coupon.discount_type === 'percent' ? subtotal * (Number(coupon.discount_value) / 100) : Number(coupon.discount_value);
+    return Math.min(raw, subtotal);
+  }
+
+  function cartTotal() {
+    return cartSubtotal() - cartDiscount();
+  }
+
+  async function applyCoupon() {
+    const input = document.getElementById('coupon-input');
+    const code = input.value.trim().toUpperCase();
+    if (!code) return;
+
+    try {
+      const { data, error } = await window.sbClient
+        .from('coupons')
+        .select('*')
+        .eq('code', code)
+        .eq('active', true)
+        .maybeSingle();
+      if (error) throw error;
+
+      if (!data || (data.expires_at && new Date(data.expires_at) < new Date())) {
+        showToast('Cupom inválido ou expirado.', 'error');
+        return;
+      }
+
+      state.appliedCoupon = data;
+      input.value = '';
+      renderCart();
+      showToast(`Cupom ${data.code} aplicado!`, 'success');
+    } catch (err) {
+      console.error('Erro ao aplicar cupom:', err);
+      showToast('Não foi possível aplicar o cupom.', 'error');
+    }
+  }
+
+  function removeCoupon() {
+    state.appliedCoupon = null;
+    renderCart();
   }
 
   function cartCount() {
@@ -538,6 +585,26 @@
       itemsWrap.appendChild(row);
     });
 
+    const subtotalRow = document.getElementById('cart-subtotal-row');
+    const appliedInfo = document.getElementById('coupon-applied-info');
+    const couponWrap = document.querySelector('.cart-drawer__coupon');
+
+    if (state.appliedCoupon) {
+      subtotalRow.style.display = '';
+      document.getElementById('cart-subtotal').textContent = formatBRL(cartSubtotal());
+      const label = state.appliedCoupon.discount_type === 'percent'
+        ? `${state.appliedCoupon.discount_value}% off`
+        : `${formatBRL(state.appliedCoupon.discount_value)} off`;
+      appliedInfo.innerHTML = `<span>🎟️ ${escapeHtml(state.appliedCoupon.code)} — ${label}</span><button type="button" id="coupon-remove-btn">Remover</button>`;
+      appliedInfo.classList.remove('hidden');
+      appliedInfo.querySelector('#coupon-remove-btn').addEventListener('click', removeCoupon);
+      couponWrap.style.display = 'none';
+    } else {
+      subtotalRow.style.display = 'none';
+      appliedInfo.classList.add('hidden');
+      couponWrap.style.display = '';
+    }
+
     document.getElementById('cart-total').textContent = formatBRL(cartTotal());
   }
 
@@ -571,7 +638,11 @@
     order.items.forEach((item) => {
       lines.push(`• ${item.quantity}x ${item.name} — ${formatBRL(item.price * item.quantity)}`);
     });
-    lines.push('', `Total: ${formatBRL(order.total)}`);
+    lines.push('', `Subtotal: ${formatBRL(order.subtotal)}`);
+    if (order.discount > 0) {
+      lines.push(`Desconto (${order.coupon_code}): -${formatBRL(order.discount)}`);
+    }
+    lines.push(`Total: ${formatBRL(order.total)}`);
     if (order.note) {
       lines.push('', order.note);
     }
@@ -607,6 +678,8 @@
         category: item.category,
       })),
       total: cartTotal(),
+      coupon_code: state.appliedCoupon ? state.appliedCoupon.code : null,
+      discount: cartDiscount(),
       note: backorderProduct
         ? `Também gostaria de encomendar (esgotado no momento): ${backorderProduct.name} — ${formatBRL(backorderProduct.price)}`
         : null,
@@ -619,12 +692,13 @@
       const { error } = await window.sbClient.from('orders').insert(orderPayload);
       if (error) throw error;
 
-      const message = buildWhatsappMessage(orderPayload, name);
+      const message = buildWhatsappMessage({ ...orderPayload, subtotal: cartSubtotal() }, name);
       const waNumber = state.settings.whatsapp_number.replace(/\D/g, '');
       const waUrl = `https://wa.me/${waNumber}?text=${encodeURIComponent(message)}`;
 
       state.cart = [];
       state.pendingBackorderProduct = null;
+      state.appliedCoupon = null;
       saveCart();
       renderCartBadge();
       closeCheckout();
@@ -656,6 +730,14 @@
     document.getElementById('checkout-close').addEventListener('click', closeCheckout);
     document.getElementById('checkout-cancel').addEventListener('click', closeCheckout);
     document.getElementById('checkout-form').addEventListener('submit', submitCheckout);
+
+    document.getElementById('coupon-apply-btn').addEventListener('click', applyCoupon);
+    document.getElementById('coupon-input').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        applyCoupon();
+      }
+    });
 
     document.getElementById('hero-cta').addEventListener('click', () => {
       document.getElementById('category-tabs').scrollIntoView({ behavior: 'smooth' });

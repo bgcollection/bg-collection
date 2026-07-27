@@ -71,6 +71,15 @@
         <p class="state-banner" id="cart-empty">Seu carrinho está vazio.</p>
       </div>
       <div class="cart-drawer__footer" id="cart-footer" style="display:none;">
+        <div class="cart-drawer__coupon">
+          <input type="text" id="coupon-input" placeholder="Cupom de desconto" />
+          <button type="button" class="btn btn-outline btn-sm" id="coupon-apply-btn">Aplicar</button>
+        </div>
+        <div class="cart-drawer__coupon-applied hidden" id="coupon-applied-info"></div>
+        <div class="cart-drawer__subtotal" id="cart-subtotal-row" style="display:none;">
+          <span>Subtotal</span>
+          <span id="cart-subtotal">R$ 0,00</span>
+        </div>
         <div class="cart-drawer__subtotal">
           <span>Total</span>
           <span id="cart-total">R$ 0,00</span>

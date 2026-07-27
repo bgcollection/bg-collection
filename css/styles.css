@@ -941,6 +941,45 @@ input, select, textarea {
   color: var(--gold2);
 }
 
+.cart-drawer__coupon {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.cart-drawer__coupon input {
+  flex: 1;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg2);
+  font-family: 'Jost', sans-serif;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+}
+
+.cart-drawer__coupon-applied {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fdf1e0;
+  border: 1px solid var(--gold1);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  font-size: 0.82rem;
+  color: var(--gold2);
+}
+
+.cart-drawer__coupon-applied button {
+  background: none;
+  border: none;
+  color: var(--text2);
+  text-decoration: underline;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
 /* ----------------------------------------------------------------------------
    Modal genérico
    ---------------------------------------------------------------------------- */
@@ -1317,6 +1356,59 @@ input, select, textarea {
 /* ----------------------------------------------------------------------------
    Admin — tabela de produtos
    ---------------------------------------------------------------------------- */
+.admin-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.admin-toolbar__spacer {
+  flex: 1;
+}
+
+.admin-toolbar input[type="search"],
+.admin-toolbar input[type="text"],
+.admin-toolbar select {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg2);
+  font-family: 'Jost', sans-serif;
+  font-size: 0.85rem;
+  color: var(--text);
+}
+
+.admin-toolbar input[type="search"] {
+  min-width: 220px;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 14px;
+  font-size: 0.82rem;
+  color: var(--text2);
+}
+
+.pagination button {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  cursor: pointer;
+  font-family: 'Jost', sans-serif;
+  color: var(--text);
+}
+
+.pagination button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
 .data-table-wrap {
   background: var(--card);
   border: 1px solid var(--border);

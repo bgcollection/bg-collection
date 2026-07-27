@@ -11,11 +11,14 @@
   const PHOTO_MAX_DIMENSION = 1000;
   const PHOTO_QUALITY = 0.8;
 
+  const PAGE_SIZE = 15;
+
   const state = {
     products: [],
     orders: [],
     settings: null,
     editingProductId: null,
+    editingProductOriginalStock: null,
     existingPhotoUrls: [],
     newPhotoFiles: [],
     isFeatured: false,
@@ -23,6 +26,12 @@
     deleteTargetType: null,
     deleteTargetOrder: null,
     chartInstance: null,
+    productsFilter: { search: '', category: '', page: 1 },
+    ordersFilter: { search: '', status: '', page: 1 },
+    stockMovements: [],
+    stockFilter: { search: '', page: 1 },
+    coupons: [],
+    editingCouponId: null,
   };
 
   // -- Helpers ------------------------------------------------------------
@@ -59,6 +68,44 @@
   function resetButtonLoading(btn) {
     btn.disabled = false;
     btn.textContent = btn.dataset.originalText || btn.textContent;
+  }
+
+  function paginate(items, page, pageSize) {
+    const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
+    const clampedPage = Math.min(Math.max(1, page), totalPages);
+    const start = (clampedPage - 1) * pageSize;
+    return { pageItems: items.slice(start, start + pageSize), page: clampedPage, totalPages };
+  }
+
+  function renderPagination(containerId, page, totalPages, onChange) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    if (totalPages <= 1) {
+      el.innerHTML = '';
+      return;
+    }
+    el.innerHTML = `
+      <button type="button" data-action="prev" ${page <= 1 ? 'disabled' : ''}>‹ Anterior</button>
+      <span>Página ${page} de ${totalPages}</span>
+      <button type="button" data-action="next" ${page >= totalPages ? 'disabled' : ''}>Próxima ›</button>
+    `;
+    el.querySelector('[data-action="prev"]').addEventListener('click', () => onChange(page - 1));
+    el.querySelector('[data-action="next"]').addEventListener('click', () => onChange(page + 1));
+  }
+
+  function downloadCsv(filename, rows) {
+    const csv = rows
+      .map((row) => row.map((cell) => `"${String(cell == null ? '' : cell).replace(/"/g, '""')}"`).join(','))
+      .join('\r\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
   }
 
   // -- Compressão e upload de imagem -----------------------------------------
@@ -174,6 +221,8 @@
     if (viewName === 'dashboard') loadDashboard();
     else if (viewName === 'products') loadProductsAdmin();
     else if (viewName === 'orders') loadOrders();
+    else if (viewName === 'stock') loadStock();
+    else if (viewName === 'coupons') loadCoupons();
     else if (viewName === 'customers') loadCustomers();
     else if (viewName === 'metrics') loadMetrics();
     else if (viewName === 'settings') loadSettingsAdmin();
@@ -191,6 +240,17 @@
     return data || [];
   }
 
+  function populateCategoryFilter() {
+    const select = document.getElementById('products-category-filter');
+    if (select.options.length > 1) return;
+    CATEGORIES.forEach((cat) => {
+      const opt = document.createElement('option');
+      opt.value = cat;
+      opt.textContent = cat;
+      select.appendChild(opt);
+    });
+  }
+
   async function loadProductsAdmin() {
     const stateBanner = document.getElementById('products-admin-state');
     const tableWrap = document.getElementById('products-table-wrap');
@@ -200,6 +260,7 @@
     tableWrap.classList.add('hidden');
 
     try {
+      populateCategoryFilter();
       state.products = await fetchProducts();
       renderProductsTable();
       stateBanner.classList.add('hidden');
@@ -211,16 +272,45 @@
     }
   }
 
+  function filteredProducts() {
+    const { search, category } = state.productsFilter;
+    const term = search.trim().toLowerCase();
+    return state.products.filter((p) => {
+      if (term && !p.name.toLowerCase().includes(term)) return false;
+      if (category && p.category !== category) return false;
+      return true;
+    });
+  }
+
+  function exportProductsCsv() {
+    const rows = [['Nome', 'Categoria', 'Preço', 'Custo', 'Estoque', 'Estoque mínimo', 'Destaque', 'Ativo']];
+    filteredProducts().forEach((p) => {
+      rows.push([p.name, p.category, p.price, p.cost_price, p.stock_quantity, p.low_stock_threshold, p.is_featured ? 'Sim' : 'Não', p.is_active ? 'Sim' : 'Não']);
+    });
+    downloadCsv(`produtos-${new Date().toISOString().slice(0, 10)}.csv`, rows);
+  }
+
   function renderProductsTable() {
     const body = document.getElementById('products-table-body');
+    const filtered = filteredProducts();
 
-    if (state.products.length === 0) {
-      body.innerHTML = '<tr><td colspan="7">Nenhum produto cadastrado ainda.</td></tr>';
+    if (filtered.length === 0) {
+      body.innerHTML = `<tr><td colspan="7">${state.products.length === 0 ? 'Nenhum produto cadastrado ainda.' : 'Nenhum produto encontrado com esse filtro.'}</td></tr>`;
+      renderPagination('products-pagination', 1, 1, () => {});
       return;
     }
 
+    const { pageItems, page, totalPages } = paginate(filtered, state.productsFilter.page, PAGE_SIZE);
+    state.productsFilter.page = page;
+    renderPagination('products-pagination', page, totalPages, (newPage) => {
+      state.productsFilter.page = newPage;
+      renderProductsTable();
+    });
+
+    const productsToRender = pageItems;
+
     body.innerHTML = '';
-    state.products.forEach((product) => {
+    productsToRender.forEach((product) => {
       const tr = document.createElement('tr');
       const lowStock = product.stock_quantity <= product.low_stock_threshold;
       const thumb = product.photo_urls && product.photo_urls[0];
@@ -249,6 +339,7 @@
 
   function openProductModal(product) {
     state.editingProductId = product ? product.id : null;
+    state.editingProductOriginalStock = product ? product.stock_quantity : null;
     state.existingPhotoUrls = product ? [...(product.photo_urls || [])] : [];
     state.newPhotoFiles = [];
     state.isFeatured = product ? !!product.is_featured : false;
@@ -376,10 +467,29 @@
       if (state.editingProductId) {
         const { error } = await window.sbClient.from('products').update(payload).eq('id', state.editingProductId);
         if (error) throw error;
+
+        const delta = payload.stock_quantity - (state.editingProductOriginalStock || 0);
+        if (delta !== 0) {
+          await window.sbClient.from('stock_movements').insert({
+            product_id: state.editingProductId,
+            product_name: payload.name,
+            change_qty: delta,
+            reason: 'Ajuste manual no cadastro',
+          });
+        }
         showToast('Produto atualizado com sucesso.', 'success');
       } else {
-        const { error } = await window.sbClient.from('products').insert(payload);
+        const { data, error } = await window.sbClient.from('products').insert(payload).select().single();
         if (error) throw error;
+
+        if (payload.stock_quantity > 0) {
+          await window.sbClient.from('stock_movements').insert({
+            product_id: data.id,
+            product_name: payload.name,
+            change_qty: payload.stock_quantity,
+            reason: 'Estoque inicial (produto criado)',
+          });
+        }
         showToast('Produto criado com sucesso.', 'success');
       }
 
@@ -424,8 +534,10 @@
     const btn = document.getElementById('confirm-accept');
     setButtonLoading(btn, 'Excluindo...');
 
-    const isOrder = state.deleteTargetType === 'order';
-    const table = isOrder ? 'orders' : 'products';
+    const targetType = state.deleteTargetType;
+    const isOrder = targetType === 'order';
+    const isCoupon = targetType === 'coupon';
+    const table = isOrder ? 'orders' : isCoupon ? 'coupons' : 'products';
     const orderToDelete = state.deleteTargetOrder;
 
     try {
@@ -441,19 +553,25 @@
           if (stockError) console.error('Erro ao restaurar estoque de', item.name, stockError);
         }
         showToast('Pedido excluído — estoque restaurado.', 'success');
+      } else if (isOrder) {
+        showToast('Pedido excluído.', 'success');
+      } else if (isCoupon) {
+        showToast('Cupom excluído.', 'success');
       } else {
-        showToast(isOrder ? 'Pedido excluído.' : 'Produto excluído.', 'success');
+        showToast('Produto excluído.', 'success');
       }
 
       closeConfirmDelete();
       if (isOrder) {
         await loadOrders();
+      } else if (isCoupon) {
+        await loadCoupons();
       } else {
         await loadProductsAdmin();
       }
     } catch (err) {
       console.error('Erro ao excluir:', err);
-      showToast(isOrder ? 'Não foi possível excluir o pedido.' : 'Não foi possível excluir o produto.', 'error');
+      showToast(isOrder ? 'Não foi possível excluir o pedido.' : isCoupon ? 'Não foi possível excluir o cupom.' : 'Não foi possível excluir o produto.', 'error');
     } finally {
       resetButtonLoading(btn);
     }
@@ -490,16 +608,47 @@
     }
   }
 
+  function filteredOrders() {
+    const { search, status } = state.ordersFilter;
+    const term = search.trim().toLowerCase();
+    return state.orders.filter((o) => {
+      if (status && (o.status || 'pending') !== status) return false;
+      if (term) {
+        const haystack = `${o.customer_name || ''} ${o.customer_phone || ''}`.toLowerCase();
+        if (!haystack.includes(term)) return false;
+      }
+      return true;
+    });
+  }
+
+  function exportOrdersCsv() {
+    const rows = [['Data', 'Cliente', 'Telefone', 'Itens', 'Total', 'Desconto', 'Cupom', 'Status']];
+    filteredOrders().forEach((o) => {
+      const itemsSummary = (o.items || []).map((item) => `${item.quantity}x ${item.name}`).join('; ');
+      rows.push([formatDate(o.created_at), o.customer_name || '', o.customer_phone || '', itemsSummary, o.total, o.discount || 0, o.coupon_code || '', o.status || 'pending']);
+    });
+    downloadCsv(`pedidos-${new Date().toISOString().slice(0, 10)}.csv`, rows);
+  }
+
   function renderOrdersTable() {
     const body = document.getElementById('orders-table-body');
+    const filtered = filteredOrders();
 
-    if (state.orders.length === 0) {
-      body.innerHTML = '<tr><td colspan="7">Nenhum pedido registrado ainda.</td></tr>';
+    if (filtered.length === 0) {
+      body.innerHTML = `<tr><td colspan="7">${state.orders.length === 0 ? 'Nenhum pedido registrado ainda.' : 'Nenhum pedido encontrado com esse filtro.'}</td></tr>`;
+      renderPagination('orders-pagination', 1, 1, () => {});
       return;
     }
 
+    const { pageItems, page, totalPages } = paginate(filtered, state.ordersFilter.page, PAGE_SIZE);
+    state.ordersFilter.page = page;
+    renderPagination('orders-pagination', page, totalPages, (newPage) => {
+      state.ordersFilter.page = newPage;
+      renderOrdersTable();
+    });
+
     body.innerHTML = '';
-    state.orders.forEach((order) => {
+    pageItems.forEach((order) => {
       const itemsSummary = (order.items || [])
         .map((item) => `${item.quantity}x ${item.name}`)
         .join(', ');
@@ -507,13 +656,16 @@
       const noteHtml = order.note
         ? `<div style="margin-top:4px;font-size:0.78rem;color:var(--gold2);">⭐ ${escapeHtml(order.note)}</div>`
         : '';
+      const couponHtml = order.coupon_code
+        ? `<div style="margin-top:4px;font-size:0.78rem;color:var(--text2);">🎟️ ${escapeHtml(order.coupon_code)} (−${formatBRL(order.discount || 0)})</div>`
+        : '';
 
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td>${formatDate(order.created_at)}</td>
         <td>${escapeHtml(order.customer_name || '—')}</td>
         <td>${escapeHtml(order.customer_phone || '—')}</td>
-        <td>${escapeHtml(itemsSummary)}${noteHtml}</td>
+        <td>${escapeHtml(itemsSummary)}${noteHtml}${couponHtml}</td>
         <td>${formatBRL(order.total)}</td>
         <td>
           <select data-action="status" style="font-size:0.8rem;border:1px solid var(--border);background:var(--bg2);padding:6px 8px;border-radius:var(--radius-sm);font-family:'Jost',sans-serif;">
@@ -567,6 +719,216 @@
       showToast('Não foi possível atualizar o pedido.', 'error');
       renderOrdersTable();
     }
+  }
+
+  // -- Estoque (histórico de movimentações) --------------------------------
+
+  async function fetchStockMovements() {
+    const { data, error } = await window.sbClient
+      .from('stock_movements')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(500);
+    if (error) throw error;
+    return data || [];
+  }
+
+  async function loadStock() {
+    const stateBanner = document.getElementById('stock-state');
+    const tableWrap = document.getElementById('stock-table-wrap');
+
+    stateBanner.classList.remove('hidden', 'error');
+    stateBanner.innerHTML = '<div class="spinner"></div><p>Carregando histórico...</p>';
+    tableWrap.classList.add('hidden');
+
+    try {
+      state.stockMovements = await fetchStockMovements();
+      renderStockTable();
+      stateBanner.classList.add('hidden');
+      tableWrap.classList.remove('hidden');
+    } catch (err) {
+      console.error('Erro ao carregar histórico de estoque:', err);
+      stateBanner.innerHTML = '<p>Não foi possível carregar o histórico de estoque.</p>';
+      stateBanner.classList.add('error');
+    }
+  }
+
+  function filteredStockMovements() {
+    const term = state.stockFilter.search.trim().toLowerCase();
+    if (!term) return state.stockMovements;
+    return state.stockMovements.filter((m) => m.product_name.toLowerCase().includes(term));
+  }
+
+  function renderStockTable() {
+    const body = document.getElementById('stock-table-body');
+    const filtered = filteredStockMovements();
+
+    if (filtered.length === 0) {
+      body.innerHTML = `<tr><td colspan="4">${state.stockMovements.length === 0 ? 'Nenhuma movimentação registrada ainda.' : 'Nenhuma movimentação encontrada com esse filtro.'}</td></tr>`;
+      renderPagination('stock-pagination', 1, 1, () => {});
+      return;
+    }
+
+    const { pageItems, page, totalPages } = paginate(filtered, state.stockFilter.page, PAGE_SIZE);
+    state.stockFilter.page = page;
+    renderPagination('stock-pagination', page, totalPages, (newPage) => {
+      state.stockFilter.page = newPage;
+      renderStockTable();
+    });
+
+    body.innerHTML = pageItems
+      .map((m) => {
+        const positive = m.change_qty > 0;
+        const sign = positive ? '+' : '';
+        return `
+          <tr>
+            <td>${formatDate(m.created_at)}</td>
+            <td>${escapeHtml(m.product_name)}</td>
+            <td><span class="pill ${positive ? '' : 'pill-danger'}">${sign}${m.change_qty}</span></td>
+            <td>${escapeHtml(m.reason)}</td>
+          </tr>
+        `;
+      })
+      .join('');
+  }
+
+  // -- Cupons ---------------------------------------------------------------
+
+  async function fetchCoupons() {
+    const { data, error } = await window.sbClient
+      .from('coupons')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  }
+
+  async function loadCoupons() {
+    const stateBanner = document.getElementById('coupons-state');
+    const tableWrap = document.getElementById('coupons-table-wrap');
+
+    stateBanner.classList.remove('hidden', 'error');
+    stateBanner.innerHTML = '<div class="spinner"></div><p>Carregando cupons...</p>';
+    tableWrap.classList.add('hidden');
+
+    try {
+      state.coupons = await fetchCoupons();
+      renderCouponsTable();
+      stateBanner.classList.add('hidden');
+      tableWrap.classList.remove('hidden');
+    } catch (err) {
+      console.error('Erro ao carregar cupons:', err);
+      stateBanner.innerHTML = '<p>Não foi possível carregar os cupons.</p>';
+      stateBanner.classList.add('error');
+    }
+  }
+
+  function renderCouponsTable() {
+    const body = document.getElementById('coupons-table-body');
+
+    if (state.coupons.length === 0) {
+      body.innerHTML = '<tr><td colspan="5">Nenhum cupom cadastrado ainda.</td></tr>';
+      return;
+    }
+
+    body.innerHTML = '';
+    state.coupons.forEach((coupon) => {
+      const discountLabel = coupon.discount_type === 'percent' ? `${coupon.discount_value}%` : formatBRL(coupon.discount_value);
+      const expired = coupon.expires_at && new Date(coupon.expires_at) < new Date();
+      const validadeLabel = coupon.expires_at ? new Date(coupon.expires_at).toLocaleDateString('pt-BR') : 'Sem validade';
+      let statusLabel = 'Ativo';
+      let statusClass = '';
+      if (!coupon.active) {
+        statusLabel = 'Inativo';
+        statusClass = 'pill-danger';
+      } else if (expired) {
+        statusLabel = 'Expirado';
+        statusClass = 'pill-danger';
+      }
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><strong>${escapeHtml(coupon.code)}</strong></td>
+        <td>${discountLabel}</td>
+        <td>${validadeLabel}</td>
+        <td><span class="pill ${statusClass}">${statusLabel}</span></td>
+        <td>
+          <div class="table-actions">
+            <button class="btn btn-outline btn-sm" data-action="edit">Editar</button>
+            <button class="btn btn-danger btn-sm" data-action="delete">Excluir</button>
+          </div>
+        </td>
+      `;
+      tr.querySelector('[data-action="edit"]').addEventListener('click', () => openCouponModal(coupon));
+      tr.querySelector('[data-action="delete"]').addEventListener('click', () => openConfirmDeleteCoupon(coupon));
+      body.appendChild(tr);
+    });
+  }
+
+  function openCouponModal(coupon) {
+    state.editingCouponId = coupon ? coupon.id : null;
+    document.getElementById('coupon-modal-title').textContent = coupon ? 'Editar cupom' : 'Novo cupom';
+    document.getElementById('coupon-id').value = coupon ? coupon.id : '';
+    document.getElementById('coupon-code').value = coupon ? coupon.code : '';
+    document.getElementById('coupon-type').value = coupon ? coupon.discount_type : 'percent';
+    document.getElementById('coupon-value').value = coupon ? coupon.discount_value : '';
+    document.getElementById('coupon-expires').value = coupon && coupon.expires_at ? coupon.expires_at.slice(0, 10) : '';
+    document.getElementById('coupon-active').checked = coupon ? coupon.active : true;
+    document.getElementById('coupon-modal').classList.remove('hidden');
+  }
+
+  function closeCouponModal() {
+    document.getElementById('coupon-modal').classList.add('hidden');
+  }
+
+  async function handleCouponSubmit(event) {
+    event.preventDefault();
+    const submitBtn = document.getElementById('coupon-submit');
+
+    const expiresValue = document.getElementById('coupon-expires').value;
+    const payload = {
+      code: document.getElementById('coupon-code').value.trim().toUpperCase(),
+      discount_type: document.getElementById('coupon-type').value,
+      discount_value: Number(document.getElementById('coupon-value').value),
+      active: document.getElementById('coupon-active').checked,
+      expires_at: expiresValue ? new Date(expiresValue + 'T23:59:59').toISOString() : null,
+    };
+
+    if (!payload.code) {
+      showToast('Informe o código do cupom.', 'error');
+      return;
+    }
+
+    setButtonLoading(submitBtn, 'Salvando...');
+
+    try {
+      if (state.editingCouponId) {
+        const { error } = await window.sbClient.from('coupons').update(payload).eq('id', state.editingCouponId);
+        if (error) throw error;
+        showToast('Cupom atualizado com sucesso.', 'success');
+      } else {
+        const { error } = await window.sbClient.from('coupons').insert(payload);
+        if (error) throw error;
+        showToast('Cupom criado com sucesso.', 'success');
+      }
+
+      closeCouponModal();
+      await loadCoupons();
+    } catch (err) {
+      console.error('Erro ao salvar cupom:', err);
+      const msg = err && err.code === '23505' ? 'Já existe um cupom com esse código.' : 'Não foi possível salvar o cupom.';
+      showToast(msg, 'error');
+    } finally {
+      resetButtonLoading(submitBtn);
+    }
+  }
+
+  function openConfirmDeleteCoupon(coupon) {
+    state.deleteTargetId = coupon.id;
+    state.deleteTargetType = 'coupon';
+    document.getElementById('confirm-modal-text').textContent =
+      `Tem certeza que deseja excluir o cupom "${coupon.code}"? Essa ação não pode ser desfeita.`;
+    document.getElementById('confirm-modal').classList.remove('hidden');
   }
 
   // -- Clientes -----------------------------------------------------------
@@ -955,6 +1317,41 @@
     document.getElementById('confirm-accept').addEventListener('click', handleConfirmDelete);
 
     document.getElementById('settings-form').addEventListener('submit', handleSettingsSubmit);
+
+    document.getElementById('products-search').addEventListener('input', (e) => {
+      state.productsFilter.search = e.target.value;
+      state.productsFilter.page = 1;
+      renderProductsTable();
+    });
+    document.getElementById('products-category-filter').addEventListener('change', (e) => {
+      state.productsFilter.category = e.target.value;
+      state.productsFilter.page = 1;
+      renderProductsTable();
+    });
+    document.getElementById('products-export-csv').addEventListener('click', exportProductsCsv);
+
+    document.getElementById('orders-search').addEventListener('input', (e) => {
+      state.ordersFilter.search = e.target.value;
+      state.ordersFilter.page = 1;
+      renderOrdersTable();
+    });
+    document.getElementById('orders-status-filter').addEventListener('change', (e) => {
+      state.ordersFilter.status = e.target.value;
+      state.ordersFilter.page = 1;
+      renderOrdersTable();
+    });
+    document.getElementById('orders-export-csv').addEventListener('click', exportOrdersCsv);
+
+    document.getElementById('stock-search').addEventListener('input', (e) => {
+      state.stockFilter.search = e.target.value;
+      state.stockFilter.page = 1;
+      renderStockTable();
+    });
+
+    document.getElementById('new-coupon-btn').addEventListener('click', () => openCouponModal(null));
+    document.getElementById('coupon-modal-close').addEventListener('click', closeCouponModal);
+    document.getElementById('coupon-cancel').addEventListener('click', closeCouponModal);
+    document.getElementById('coupon-form').addEventListener('submit', handleCouponSubmit);
   }
 
   // -- Init -------------------------------------------------------------

@@ -35,6 +35,8 @@
       <button class="admin-nav__link active" data-view="dashboard">📊 Dashboard</button>
       <button class="admin-nav__link" data-view="products">👜 Produtos</button>
       <button class="admin-nav__link" data-view="orders">📦 Pedidos</button>
+      <button class="admin-nav__link" data-view="stock">📋 Estoque</button>
+      <button class="admin-nav__link" data-view="coupons">🎟️ Cupons</button>
       <button class="admin-nav__link" data-view="customers">👥 Clientes</button>
       <button class="admin-nav__link" data-view="metrics">📈 Métricas</button>
       <button class="admin-nav__link" data-view="settings">⚙️ Configurações</button>
@@ -85,21 +87,33 @@
           <p>Carregando produtos...</p>
         </div>
 
-        <div class="data-table-wrap hidden" id="products-table-wrap">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Foto</th>
-                <th>Nome</th>
-                <th>Categoria</th>
-                <th>Preço</th>
-                <th>Estoque</th>
-                <th>⭐</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody id="products-table-body"></tbody>
-          </table>
+        <div class="hidden" id="products-table-wrap">
+          <div class="admin-toolbar">
+            <input type="search" id="products-search" placeholder="Buscar por nome..." />
+            <select id="products-category-filter">
+              <option value="">Todas as categorias</option>
+            </select>
+            <div class="admin-toolbar__spacer"></div>
+            <button class="btn btn-outline btn-sm" id="products-export-csv">⬇ Exportar CSV</button>
+          </div>
+
+          <div class="data-table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Foto</th>
+                  <th>Nome</th>
+                  <th>Categoria</th>
+                  <th>Preço</th>
+                  <th>Estoque</th>
+                  <th>⭐</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="products-table-body"></tbody>
+            </table>
+          </div>
+          <div class="pagination" id="products-pagination"></div>
         </div>
       </section>
 
@@ -112,20 +126,95 @@
           <p>Carregando pedidos...</p>
         </div>
 
-        <div class="data-table-wrap hidden" id="orders-table-wrap">
+        <div class="hidden" id="orders-table-wrap">
+          <div class="admin-toolbar">
+            <input type="search" id="orders-search" placeholder="Buscar por nome ou telefone..." />
+            <select id="orders-status-filter">
+              <option value="">Todos os status</option>
+              <option value="pending">Pendente</option>
+              <option value="sold">Vendido</option>
+              <option value="cancelled">Cancelado</option>
+            </select>
+            <div class="admin-toolbar__spacer"></div>
+            <button class="btn btn-outline btn-sm" id="orders-export-csv">⬇ Exportar CSV</button>
+          </div>
+
+          <div class="data-table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Cliente</th>
+                  <th>Telefone</th>
+                  <th>Itens</th>
+                  <th>Total</th>
+                  <th>Status</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="orders-table-body"></tbody>
+            </table>
+          </div>
+          <div class="pagination" id="orders-pagination"></div>
+        </div>
+      </section>
+
+      <!-- ---------- ESTOQUE ---------- -->
+      <section id="view-stock" class="admin-view hidden">
+        <div class="admin-topbar"><h2>Histórico de estoque</h2></div>
+
+        <div id="stock-state" class="state-banner">
+          <div class="spinner"></div>
+          <p>Carregando histórico...</p>
+        </div>
+
+        <div class="hidden" id="stock-table-wrap">
+          <div class="admin-toolbar">
+            <input type="search" id="stock-search" placeholder="Buscar por produto..." />
+            <div class="admin-toolbar__spacer"></div>
+          </div>
+
+          <div class="data-table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Produto</th>
+                  <th>Movimento</th>
+                  <th>Motivo</th>
+                </tr>
+              </thead>
+              <tbody id="stock-table-body"></tbody>
+            </table>
+          </div>
+          <div class="pagination" id="stock-pagination"></div>
+        </div>
+      </section>
+
+      <!-- ---------- CUPONS ---------- -->
+      <section id="view-coupons" class="admin-view hidden">
+        <div class="admin-topbar">
+          <h2>Cupons</h2>
+          <button class="btn btn-primary" id="new-coupon-btn">+ Novo cupom</button>
+        </div>
+
+        <div id="coupons-state" class="state-banner">
+          <div class="spinner"></div>
+          <p>Carregando cupons...</p>
+        </div>
+
+        <div class="data-table-wrap hidden" id="coupons-table-wrap">
           <table class="data-table">
             <thead>
               <tr>
-                <th>Data</th>
-                <th>Cliente</th>
-                <th>Telefone</th>
-                <th>Itens</th>
-                <th>Total</th>
+                <th>Código</th>
+                <th>Desconto</th>
+                <th>Validade</th>
                 <th>Status</th>
                 <th>Ações</th>
               </tr>
             </thead>
-            <tbody id="orders-table-body"></tbody>
+            <tbody id="coupons-table-body"></tbody>
           </table>
         </div>
       </section>
@@ -268,6 +357,50 @@
         <div class="modal__footer">
           <button type="button" class="btn btn-outline" id="product-modal-cancel">Cancelar</button>
           <button type="submit" class="btn btn-primary" id="product-submit">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===================== MODAL CUPOM ===================== -->
+  <div class="modal-overlay hidden" id="coupon-modal">
+    <div class="modal">
+      <div class="modal__header">
+        <h3 id="coupon-modal-title" style="margin:0;">Novo cupom</h3>
+        <button class="modal__close" id="coupon-modal-close" aria-label="Fechar">✕</button>
+      </div>
+      <form id="coupon-form">
+        <div class="modal__body">
+          <input type="hidden" id="coupon-id" />
+          <div class="field">
+            <label for="coupon-code">Código</label>
+            <input type="text" id="coupon-code" placeholder="Ex: BEMVINDA10" required style="text-transform:uppercase;" />
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="coupon-type">Tipo de desconto</label>
+              <select id="coupon-type" required>
+                <option value="percent">Percentual (%)</option>
+                <option value="fixed">Valor fixo (R$)</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="coupon-value">Valor</label>
+              <input type="number" id="coupon-value" min="0.01" step="0.01" required />
+            </div>
+          </div>
+          <div class="field">
+            <label for="coupon-expires">Validade (opcional)</label>
+            <input type="date" id="coupon-expires" />
+          </div>
+          <div class="field" style="flex-direction:row;align-items:center;gap:8px;">
+            <input type="checkbox" id="coupon-active" style="width:auto;" checked />
+            <label for="coupon-active" style="margin:0;">Cupom ativo</label>
+          </div>
+        </div>
+        <div class="modal__footer">
+          <button type="button" class="btn btn-outline" id="coupon-cancel">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="coupon-submit">Salvar</button>
         </div>
       </form>
     </div>

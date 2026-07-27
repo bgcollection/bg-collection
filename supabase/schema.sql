@@ -71,12 +71,18 @@ create table if not exists public.orders (
   total numeric(10,2) not null check (total >= 0),
   status text not null default 'pending' check (status in ('pending', 'sold', 'cancelled')),
   note text,
+  coupon_code text,
+  discount numeric(10,2) not null default 0,
   created_at timestamptz not null default now()
 );
 
 -- Migração: bancos criados antes do status de pedido (pendente/vendido/cancelado).
 alter table public.orders add column if not exists status text not null default 'pending';
 alter table public.orders add column if not exists note text;
+
+-- Migração: bancos criados antes do cupom de desconto.
+alter table public.orders add column if not exists coupon_code text;
+alter table public.orders add column if not exists discount numeric(10,2) not null default 0;
 do $$
 begin
   if not exists (
@@ -135,6 +141,38 @@ create table if not exists public.cart_sessions (
 );
 
 -- ----------------------------------------------------------------------------
+-- Tabela: stock_movements
+-- Histórico de cada entrada/saída de estoque (venda, estorno, ajuste manual).
+-- product_name é um snapshot: se o produto for excluído depois, o histórico
+-- continua legível (mesmo padrão do items congelado em orders).
+-- ----------------------------------------------------------------------------
+create table if not exists public.stock_movements (
+  id uuid primary key default gen_random_uuid(),
+  product_id uuid references public.products(id) on delete set null,
+  product_name text not null,
+  change_qty integer not null,
+  reason text not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists stock_movements_created_at_idx on public.stock_movements (created_at);
+create index if not exists stock_movements_product_id_idx on public.stock_movements (product_id);
+
+-- ----------------------------------------------------------------------------
+-- Tabela: coupons
+-- Cupom de desconto aplicado no checkout da vitrine.
+-- ----------------------------------------------------------------------------
+create table if not exists public.coupons (
+  id uuid primary key default gen_random_uuid(),
+  code text not null unique,
+  discount_type text not null check (discount_type in ('percent', 'fixed')),
+  discount_value numeric(10,2) not null check (discount_value > 0),
+  active boolean not null default true,
+  expires_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+-- ----------------------------------------------------------------------------
 -- updated_at automático
 -- ----------------------------------------------------------------------------
 create or replace function public.set_updated_at()
@@ -165,10 +203,16 @@ language plpgsql
 security definer
 set search_path = public
 as $$
+declare
+  v_name text;
 begin
   update public.products
   set stock_quantity = greatest(0, stock_quantity - qty)
-  where id = product_id;
+  where id = product_id
+  returning name into v_name;
+
+  insert into public.stock_movements (product_id, product_name, change_qty, reason)
+  values (product_id, coalesce(v_name, '—'), -qty, 'Venda (pedido marcado como vendido)');
 end;
 $$;
 
@@ -178,10 +222,16 @@ language plpgsql
 security definer
 set search_path = public
 as $$
+declare
+  v_name text;
 begin
   update public.products
   set stock_quantity = stock_quantity + qty
-  where id = product_id;
+  where id = product_id
+  returning name into v_name;
+
+  insert into public.stock_movements (product_id, product_name, change_qty, reason)
+  values (product_id, coalesce(v_name, '—'), qty, 'Estorno (pedido voltou ou foi excluído)');
 end;
 $$;
 
@@ -309,6 +359,57 @@ create policy "cart_sessions_delete_public"
 drop policy if exists "cart_sessions_select_auth" on public.cart_sessions;
 create policy "cart_sessions_select_auth"
   on public.cart_sessions for select
+  to authenticated
+  using (true);
+
+-- stock_movements: só o admin acessa (inserido também via decrement_stock/
+-- increment_stock, que rodam como SECURITY DEFINER e não dependem de RLS).
+alter table public.stock_movements enable row level security;
+
+drop policy if exists "stock_movements_select_auth" on public.stock_movements;
+create policy "stock_movements_select_auth"
+  on public.stock_movements for select
+  to authenticated
+  using (true);
+
+drop policy if exists "stock_movements_insert_auth" on public.stock_movements;
+create policy "stock_movements_insert_auth"
+  on public.stock_movements for insert
+  to authenticated
+  with check (true);
+
+-- coupons: qualquer visitante lê só os cupons ativos e válidos (pra conferir
+-- o código no checkout); o admin lê/gerencia todos, incluindo inativos.
+alter table public.coupons enable row level security;
+
+drop policy if exists "coupons_select_public" on public.coupons;
+create policy "coupons_select_public"
+  on public.coupons for select
+  to anon, authenticated
+  using (active = true and (expires_at is null or expires_at > now()));
+
+drop policy if exists "coupons_select_auth_all" on public.coupons;
+create policy "coupons_select_auth_all"
+  on public.coupons for select
+  to authenticated
+  using (true);
+
+drop policy if exists "coupons_insert_auth" on public.coupons;
+create policy "coupons_insert_auth"
+  on public.coupons for insert
+  to authenticated
+  with check (true);
+
+drop policy if exists "coupons_update_auth" on public.coupons;
+create policy "coupons_update_auth"
+  on public.coupons for update
+  to authenticated
+  using (true)
+  with check (true);
+
+drop policy if exists "coupons_delete_auth" on public.coupons;
+create policy "coupons_delete_auth"
+  on public.coupons for delete
   to authenticated
   using (true);
 
