@@ -449,9 +449,10 @@ input, select, textarea {
 .store-nav {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 26px;
+  justify-content: flex-start;
+  gap: 16px;
   flex: 1;
+  min-width: 0;
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -462,9 +463,9 @@ input, select, textarea {
 
 .store-nav a {
   color: var(--text);
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 500;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   white-space: nowrap;
   text-decoration: none;
@@ -483,8 +484,20 @@ input, select, textarea {
 .store-header__actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   flex-shrink: 0;
+}
+
+.store-header__actions .social-icon {
+  width: 30px;
+  height: 30px;
+}
+
+.store-header__divider {
+  width: 1px;
+  height: 18px;
+  background: var(--border);
+  margin: 0 6px;
 }
 
 .icon-btn {
@@ -779,20 +792,27 @@ input, select, textarea {
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: 20px 24px;
-  margin: 0 auto 8px;
+  margin: 40px auto;
 }
 
 .trust-item {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   flex: 1;
   min-width: 200px;
 }
 
 .trust-item__icon {
-  font-size: 1.4rem;
   flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--bg);
+  color: var(--gold2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .trust-item strong {
@@ -1336,13 +1356,6 @@ input, select, textarea {
   color: var(--text2);
   font-size: 0.8rem;
   border-top: 1px solid var(--border);
-}
-
-.store-footer__socials {
-  display: flex;
-  justify-content: center;
-  gap: 12px;
-  margin-bottom: 16px;
 }
 
 /* ----------------------------------------------------------------------------
