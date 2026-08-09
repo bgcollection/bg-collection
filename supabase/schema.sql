@@ -13,7 +13,7 @@ create extension if not exists "pgcrypto";
 create table if not exists public.products (
   id uuid primary key default gen_random_uuid(),
   name text not null,
-  category text not null check (category in ('Bolsas', 'Pulseiras', 'Relógios', 'Brincos', 'Cintos', 'Lenços', 'Colares', 'Óculos')),
+  category text not null check (category in ('Bolsas', 'Pulseiras', 'Relógios', 'Brincos', 'Cintos', 'Lenços', 'Colares', 'Óculos', 'Berloques', 'Anéis')),
   price numeric(10,2) not null check (price >= 0),
   cost_price numeric(10,2) not null default 0 check (cost_price >= 0),
   stock_quantity integer not null default 0 check (stock_quantity >= 0),
@@ -48,10 +48,10 @@ end $$;
 alter table public.products add column if not exists badge text;
 alter table public.products add column if not exists is_featured boolean not null default false;
 
--- Migração: bancos criados antes das categorias "Colares" e "Óculos".
+-- Migração: bancos criados antes das categorias "Colares", "Óculos", "Berloques" e "Anéis".
 alter table public.products drop constraint if exists products_category_check;
 alter table public.products add constraint products_category_check
-  check (category in ('Bolsas', 'Pulseiras', 'Relógios', 'Brincos', 'Cintos', 'Lenços', 'Colares', 'Óculos'));
+  check (category in ('Bolsas', 'Pulseiras', 'Relógios', 'Brincos', 'Cintos', 'Lenços', 'Colares', 'Óculos', 'Berloques', 'Anéis'));
 
 create index if not exists products_category_idx on public.products (category);
 create index if not exists products_is_active_idx on public.products (is_active);
