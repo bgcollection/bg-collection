@@ -277,7 +277,13 @@
               <label for="settings-instagram">Instagram (usuário, sem @)</label>
               <input type="text" id="settings-instagram" placeholder="bgcollection" />
             </div>
-            <p class="field-hint">O destaque da home agora é escolhido marcando um produto com a estrela ⭐, na aba Produtos.</p>
+            <div class="field">
+              <label>Foto de fundo do hero (banner grande da home)</label>
+              <div class="photo-preview-grid" id="hero-photo-preview"></div>
+              <input type="file" id="hero-photo-input" accept="image/*" />
+              <div class="field-hint">Aparece grande no topo da loja, atrás do texto de boas-vindas. Não precisa ser de um produto específico.</div>
+            </div>
+            <p class="field-hint">A estrela ⭐ na aba Produtos continua controlando quais produtos aparecem na seção "Produtos em destaque" da vitrine.</p>
             <button type="submit" class="btn btn-primary" id="settings-submit">Salvar configurações</button>
           </form>
         </div>

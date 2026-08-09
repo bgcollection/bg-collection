@@ -32,6 +32,8 @@
     stockFilter: { search: '', page: 1 },
     coupons: [],
     editingCouponId: null,
+    heroPhotoUrl: '',
+    newHeroPhotoFile: null,
   };
 
   // -- Helpers ------------------------------------------------------------
@@ -1101,10 +1103,40 @@
       document.getElementById('settings-store-name').value = data.store_name || '';
       document.getElementById('settings-whatsapp').value = data.whatsapp_number || '';
       document.getElementById('settings-instagram').value = data.instagram_handle || '';
+      state.heroPhotoUrl = data.hero_photo_url || '';
+      state.newHeroPhotoFile = null;
+      document.getElementById('hero-photo-input').value = '';
+      renderHeroPhotoPreview();
     } catch (err) {
       console.error('Erro ao carregar configurações:', err);
       showToast('Não foi possível carregar as configurações da loja.', 'error');
     }
+  }
+
+  function renderHeroPhotoPreview() {
+    const grid = document.getElementById('hero-photo-preview');
+    grid.innerHTML = '';
+
+    const src = state.newHeroPhotoFile ? URL.createObjectURL(state.newHeroPhotoFile) : state.heroPhotoUrl;
+    if (!src) return;
+
+    const item = document.createElement('div');
+    item.className = 'photo-preview-item';
+    item.innerHTML = `<img src="${escapeHtml(src)}" alt="" /><button type="button" aria-label="Remover foto">✕</button>`;
+    item.querySelector('button').addEventListener('click', () => {
+      state.heroPhotoUrl = '';
+      state.newHeroPhotoFile = null;
+      document.getElementById('hero-photo-input').value = '';
+      renderHeroPhotoPreview();
+    });
+    grid.appendChild(item);
+  }
+
+  function handleHeroPhotoChange(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    state.newHeroPhotoFile = file;
+    renderHeroPhotoPreview();
   }
 
   async function handleSettingsSubmit(event) {
@@ -1120,9 +1152,17 @@
     setButtonLoading(submitBtn, 'Salvando...');
 
     try {
+      if (state.newHeroPhotoFile) {
+        const blob = await compressImage(state.newHeroPhotoFile, PHOTO_MAX_DIMENSION, PHOTO_QUALITY);
+        state.heroPhotoUrl = await uploadPhoto(blob, 'hero');
+        state.newHeroPhotoFile = null;
+      }
+      payload.hero_photo_url = state.heroPhotoUrl || null;
+
       const { error } = await window.sbClient.from('store_settings').update(payload).eq('id', 1);
       if (error) throw error;
 
+      renderHeroPhotoPreview();
       showToast('Configurações salvas com sucesso.', 'success');
     } catch (err) {
       console.error('Erro ao salvar configurações:', err);
@@ -1317,6 +1357,7 @@
     document.getElementById('confirm-accept').addEventListener('click', handleConfirmDelete);
 
     document.getElementById('settings-form').addEventListener('submit', handleSettingsSubmit);
+    document.getElementById('hero-photo-input').addEventListener('change', handleHeroPhotoChange);
 
     document.getElementById('products-search').addEventListener('input', (e) => {
       state.productsFilter.search = e.target.value;

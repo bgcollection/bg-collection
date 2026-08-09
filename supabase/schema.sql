@@ -103,6 +103,7 @@ create table if not exists public.store_settings (
   store_name text not null default 'BG Collection & Co',
   whatsapp_number text,
   instagram_handle text,
+  hero_photo_url text,
   updated_at timestamptz not null default now()
 );
 
@@ -110,9 +111,9 @@ insert into public.store_settings (id, store_name)
 values (1, 'BG Collection & Co')
 on conflict (id) do nothing;
 
--- Migração: o destaque da home passou a ser um produto marcado (is_featured),
--- não mais uma foto avulsa nas configurações.
-alter table public.store_settings drop column if exists featured_photo_url;
+-- Migração: bancos criados antes da foto de fundo do hero (banner grande da
+-- home, independente de qualquer produto marcado como destaque).
+alter table public.store_settings add column if not exists hero_photo_url text;
 
 -- ----------------------------------------------------------------------------
 -- Tabela: site_visits

@@ -158,6 +158,7 @@
       if (error) throw error;
       state.settings = data;
       applySettingsToPage();
+      renderHero();
     } catch (err) {
       console.error('Erro ao carregar configurações da loja:', err);
       showToast('Não foi possível carregar as configurações da loja.', 'error');
@@ -194,39 +195,13 @@
     }
   }
 
-  function renderHeroDestaque() {
+  function renderHero() {
     const wrap = document.getElementById('hero-destaque');
-    const featured = state.products.find((p) => p.is_featured) || state.products.find((p) => (p.photo_urls || []).length);
+    const photo = state.settings && state.settings.hero_photo_url;
 
-    if (!featured) {
-      wrap.innerHTML = `
-        <div class="hero__photo">
-          <div class="hero__photo-empty">Sem fotos ainda</div>
-        </div>
-      `;
-      return;
-    }
-
-    const photo = (featured.photo_urls && featured.photo_urls[0]) || '';
-    wrap.innerHTML = `
-      <div class="hero__photo">
-        ${photo ? `<img src="${escapeHtml(photo)}" alt="${escapeHtml(featured.name)}" />` : '<div class="hero__photo-empty">Sem fotos ainda</div>'}
-        <div class="hero__floating-card">
-          <div class="hero__floating-card__label">✦ Destaque da semana</div>
-          <div class="hero__floating-card__img">
-            ${photo ? `<img src="${escapeHtml(photo)}" alt="" />` : ''}
-          </div>
-          <div class="hero__floating-card__name">${escapeHtml(featured.name)}</div>
-          <div class="hero__floating-card__price">${formatBRL(featured.price)}</div>
-          <button type="button" class="btn btn-primary btn-sm btn-block">Comprar</button>
-        </div>
-      </div>
-    `;
-    wrap.querySelector('.hero__floating-card').addEventListener('click', () => openLightbox(featured));
-    wrap.querySelector('.hero__floating-card button').addEventListener('click', (e) => {
-      e.stopPropagation();
-      openLightbox(featured);
-    });
+    wrap.innerHTML = photo
+      ? `<div class="hero__photo"><img src="${escapeHtml(photo)}" alt="" /></div>`
+      : '<div class="hero__photo"><div class="hero__photo-empty">Sem foto ainda</div></div>';
   }
 
   async function loadProducts() {
@@ -249,7 +224,6 @@
       renderCategoryTabs();
       renderProducts();
       renderFeaturedGrid();
-      renderHeroDestaque();
       reconcileCartWithProducts();
     } catch (err) {
       console.error('Erro ao carregar produtos:', err);
