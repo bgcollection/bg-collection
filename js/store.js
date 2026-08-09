@@ -7,7 +7,7 @@
 (function () {
   'use strict';
 
-  const CATEGORIES = ['Bolsas', 'Pulseiras', 'Relógios', 'Brincos', 'Cintos', 'Lenços', 'Colares', 'Óculos', 'Berloques', 'Anéis'];
+  const CATEGORIES = ['Bolsas', 'Pulseiras', 'Relógios', 'Brincos', 'Cintos', 'Lenços', 'Colares', 'Óculos', 'Berloques', 'Anéis', 'Carteiras'];
   const CART_STORAGE_KEY = 'bg_cart_v1';
   const SESSION_STORAGE_KEY = 'bg_session_id_v1';
   const FAVORITES_STORAGE_KEY = 'bg_favorites_v1';

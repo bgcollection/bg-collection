@@ -7,7 +7,7 @@
 (function () {
   'use strict';
 
-  const CATEGORIES = ['Bolsas', 'Pulseiras', 'Relógios', 'Brincos', 'Cintos', 'Lenços', 'Colares', 'Óculos', 'Berloques', 'Anéis'];
+  const CATEGORIES = ['Bolsas', 'Pulseiras', 'Relógios', 'Brincos', 'Cintos', 'Lenços', 'Colares', 'Óculos', 'Berloques', 'Anéis', 'Carteiras'];
   const PHOTO_MAX_DIMENSION = 1000;
   const PHOTO_QUALITY = 0.8;
   const MAX_FEATURED = 10;

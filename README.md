@@ -47,7 +47,7 @@ Como não há build step, o GitHub Pages serve os arquivos diretamente — não 
 
 ## Categorias suportadas
 
-Bolsas, Pulseiras, Relógios, Brincos, Cintos, Lenços, Colares, Óculos, Berloques, Anéis.
+Bolsas, Pulseiras, Relógios, Brincos, Cintos, Lenços, Colares, Óculos, Berloques, Anéis, Carteiras.
 
 ## Segurança (RLS)
 
