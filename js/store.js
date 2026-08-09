@@ -248,13 +248,16 @@
         return false;
       }
 
-      if (item.size && (product.sizes || []).length > 0 && !product.sizes.includes(item.size)) {
+      const available = item.size ? (product.size_stock || {})[item.size] || 0 : product.stock_quantity;
+
+      if (item.size && available <= 0) {
         removed.push(`${item.name} (Tam ${item.size})`);
         return false;
       }
 
-      if (item.quantity > product.stock_quantity) {
-        item.quantity = product.stock_quantity;
+      if (item.quantity > available) {
+        item.quantity = available;
+        item.stock_quantity = available;
         adjusted.push(item.name);
       }
 
@@ -388,7 +391,7 @@
       e.stopPropagation();
       if (outOfStock) {
         openBackorder(product);
-      } else if ((product.sizes || []).length > 0) {
+      } else if (Object.keys(product.size_stock || {}).length > 0) {
         openLightbox(product);
       } else {
         addToCart(product);
@@ -455,9 +458,16 @@
     document.body.style.overflow = 'hidden';
   }
 
+  function availableSizes(product) {
+    return Object.entries(product.size_stock || {})
+      .filter(([, qty]) => qty > 0)
+      .map(([size]) => size)
+      .sort((a, b) => Number(a) - Number(b));
+  }
+
   function renderLightboxSizes(product) {
     const wrap = document.getElementById('lightbox-sizes');
-    const sizes = product.sizes || [];
+    const sizes = availableSizes(product);
 
     if (sizes.length === 0) {
       wrap.classList.add('hidden');
@@ -481,7 +491,7 @@
   function updateLightboxAddButton(product) {
     const addBtn = document.getElementById('lightbox-addcart');
     const outOfStock = product.stock_quantity <= 0;
-    const needsSize = (product.sizes || []).length > 0;
+    const needsSize = availableSizes(product).length > 0;
 
     addBtn.disabled = false;
     addBtn.textContent = outOfStock ? 'Encomendar' : 'Adicionar ao carrinho';
@@ -585,8 +595,9 @@
   function addToCart(product, size) {
     const existing = state.cart.find((item) => item.productId === product.id && item.size === (size || null));
     const currentQty = existing ? existing.quantity : 0;
+    const available = size ? (product.size_stock || {})[size] || 0 : product.stock_quantity;
 
-    if (currentQty + 1 > product.stock_quantity) {
+    if (currentQty + 1 > available) {
       showToast('Quantidade máxima em estoque atingida para este produto.', 'error');
       return;
     }
@@ -600,7 +611,7 @@
         price: Number(product.price),
         category: product.category,
         photo_url: (product.photo_urls && product.photo_urls[0]) || '',
-        stock_quantity: product.stock_quantity,
+        stock_quantity: available,
         size: size || null,
         quantity: 1,
       });

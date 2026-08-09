@@ -339,27 +339,34 @@ input, select, textarea {
   margin-top: 4px;
 }
 
-.size-checkbox-grid {
+.size-stock-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 10px;
 }
 
-.size-checkbox {
+.size-stock-item {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
+  width: 56px;
+}
+
+.size-stock-item span {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text2);
+}
+
+.size-stock-item input {
+  width: 100%;
+  padding: 6px 4px;
+  text-align: center;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 6px 12px;
-  font-size: 0.85rem;
-  cursor: pointer;
   background: var(--bg2);
-}
-
-.size-checkbox input {
-  width: auto;
-  margin: 0;
+  font-size: 0.85rem;
 }
 
 /* ----------------------------------------------------------------------------

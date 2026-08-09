@@ -358,9 +358,9 @@
     document.getElementById('product-description').value = product ? (product.description || '') : '';
     document.getElementById('product-badge').value = product ? (product.badge || '') : '';
 
-    const productSizes = product ? (product.sizes || []) : [];
-    document.querySelectorAll('.product-size-option').forEach((box) => {
-      box.checked = productSizes.includes(box.value);
+    const sizeStock = product ? (product.size_stock || {}) : {};
+    document.querySelectorAll('.product-size-qty').forEach((input) => {
+      input.value = sizeStock[input.dataset.size] || 0;
     });
     updateSizesFieldVisibility();
 
@@ -371,11 +371,20 @@
     document.getElementById('product-modal').classList.remove('hidden');
   }
 
+  function sumSizeQuantities() {
+    return Array.from(document.querySelectorAll('.product-size-qty'))
+      .reduce((sum, input) => sum + (Number(input.value) || 0), 0);
+  }
+
   function updateSizesFieldVisibility() {
     const isRing = document.getElementById('product-category').value === 'Anéis';
     document.getElementById('product-sizes-field').classList.toggle('hidden', !isRing);
-    if (!isRing) {
-      document.querySelectorAll('.product-size-option').forEach((box) => { box.checked = false; });
+    const stockInput = document.getElementById('product-stock');
+    stockInput.readOnly = isRing;
+    if (isRing) {
+      stockInput.value = sumSizeQuantities();
+    } else {
+      document.querySelectorAll('.product-size-qty').forEach((input) => { input.value = 0; });
     }
   }
 
@@ -451,19 +460,26 @@
     event.preventDefault();
     const submitBtn = document.getElementById('product-submit');
 
+    const isRing = document.getElementById('product-category').value === 'Anéis';
+    const sizeStock = {};
+    if (isRing) {
+      document.querySelectorAll('.product-size-qty').forEach((input) => {
+        const qty = Number(input.value) || 0;
+        if (qty > 0) sizeStock[input.dataset.size] = qty;
+      });
+    }
+
     const payload = {
       name: document.getElementById('product-name').value.trim(),
       category: document.getElementById('product-category').value,
-      stock_quantity: Number(document.getElementById('product-stock').value),
+      stock_quantity: isRing ? sumSizeQuantities() : Number(document.getElementById('product-stock').value),
       price: Number(document.getElementById('product-price').value),
       cost_price: Number(document.getElementById('product-cost').value),
       low_stock_threshold: Number(document.getElementById('product-low-stock').value),
       description: document.getElementById('product-description').value.trim(),
       badge: document.getElementById('product-badge').value || null,
       is_featured: state.isFeatured,
-      sizes: document.getElementById('product-category').value === 'Anéis'
-        ? Array.from(document.querySelectorAll('.product-size-option:checked')).map((box) => box.value)
-        : [],
+      size_stock: sizeStock,
     };
 
     if (!payload.name) {
@@ -574,6 +590,7 @@
           const { error: stockError } = await window.sbClient.rpc('increment_stock', {
             product_id: item.product_id,
             qty: item.quantity,
+            size: item.size || null,
           });
           if (stockError) console.error('Erro ao restaurar estoque de', item.name, stockError);
         }
@@ -723,6 +740,7 @@
           const { error: stockError } = await window.sbClient.rpc('decrement_stock', {
             product_id: item.product_id,
             qty: item.quantity,
+            size: item.size || null,
           });
           if (stockError) console.error('Erro ao descontar estoque de', item.name, stockError);
         }
@@ -732,6 +750,7 @@
           const { error: stockError } = await window.sbClient.rpc('increment_stock', {
             product_id: item.product_id,
             qty: item.quantity,
+            size: item.size || null,
           });
           if (stockError) console.error('Erro ao restaurar estoque de', item.name, stockError);
         }
@@ -1375,6 +1394,11 @@
     document.getElementById('product-photos-input').addEventListener('change', handleProductPhotosChange);
     document.getElementById('product-featured-toggle').addEventListener('click', toggleFeaturedFlag);
     document.getElementById('product-category').addEventListener('change', updateSizesFieldVisibility);
+    document.querySelectorAll('.product-size-qty').forEach((input) => {
+      input.addEventListener('input', () => {
+        document.getElementById('product-stock').value = sumSizeQuantities();
+      });
+    });
 
     document.getElementById('confirm-modal-close').addEventListener('click', closeConfirmDelete);
     document.getElementById('confirm-cancel').addEventListener('click', closeConfirmDelete);

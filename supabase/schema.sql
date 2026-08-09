@@ -23,13 +23,17 @@ create table if not exists public.products (
   badge text check (badge is null or badge in ('new', 'sale')),
   is_featured boolean not null default false,
   is_active boolean not null default true,
-  sizes text[] not null default '{}',
+  size_stock jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 
--- Migração: bancos criados antes das numerações de anéis.
-alter table public.products add column if not exists sizes text[] not null default '{}';
+-- Migração: bancos criados antes das numerações de anéis. size_stock guarda
+-- {"15": 2, "18": 1, ...} — quantidade em estoque por numeração. stock_quantity
+-- continua existindo como a soma de todas as numerações (mantém o resto do
+-- admin, tipo alerta de estoque baixo, funcionando sem mudança).
+alter table public.products add column if not exists size_stock jsonb not null default '{}'::jsonb;
+alter table public.products drop column if exists sizes;
 
 -- Migração: bancos criados antes da galeria de múltiplas fotos tinham uma
 -- coluna única `photo_url`. Este bloco é seguro de rodar em bancos novos
@@ -207,7 +211,12 @@ create trigger products_set_updated_at
 -- fora do CRUD normal — o ajuste de estoque por pedido passa só por aqui,
 -- de forma atômica e nunca abaixo de zero.
 -- ----------------------------------------------------------------------------
-create or replace function public.decrement_stock(product_id uuid, qty integer)
+-- Migração: assinatura antiga (sem o parâmetro size) precisa sair antes,
+-- senão fica com as duas versões da função ao mesmo tempo.
+drop function if exists public.decrement_stock(uuid, integer);
+drop function if exists public.increment_stock(uuid, integer);
+
+create or replace function public.decrement_stock(product_id uuid, qty integer, size text default null)
 returns void
 language plpgsql
 security definer
@@ -216,17 +225,34 @@ as $$
 declare
   v_name text;
 begin
-  update public.products
-  set stock_quantity = greatest(0, stock_quantity - qty)
-  where id = product_id
-  returning name into v_name;
+  if size is not null then
+    update public.products
+    set size_stock = jsonb_set(
+          coalesce(size_stock, '{}'::jsonb),
+          array[size],
+          to_jsonb(greatest(0, coalesce((size_stock->>size)::integer, 0) - qty))
+        ),
+        stock_quantity = greatest(0, stock_quantity - qty)
+    where id = product_id
+    returning name into v_name;
+  else
+    update public.products
+    set stock_quantity = greatest(0, stock_quantity - qty)
+    where id = product_id
+    returning name into v_name;
+  end if;
 
   insert into public.stock_movements (product_id, product_name, change_qty, reason)
-  values (product_id, coalesce(v_name, '—'), -qty, 'Venda (pedido marcado como vendido)');
+  values (
+    product_id,
+    coalesce(v_name, '—'),
+    -qty,
+    'Venda (pedido marcado como vendido)' || case when size is not null then ' — Tam ' || size else '' end
+  );
 end;
 $$;
 
-create or replace function public.increment_stock(product_id uuid, qty integer)
+create or replace function public.increment_stock(product_id uuid, qty integer, size text default null)
 returns void
 language plpgsql
 security definer
@@ -235,18 +261,35 @@ as $$
 declare
   v_name text;
 begin
-  update public.products
-  set stock_quantity = stock_quantity + qty
-  where id = product_id
-  returning name into v_name;
+  if size is not null then
+    update public.products
+    set size_stock = jsonb_set(
+          coalesce(size_stock, '{}'::jsonb),
+          array[size],
+          to_jsonb(coalesce((size_stock->>size)::integer, 0) + qty)
+        ),
+        stock_quantity = stock_quantity + qty
+    where id = product_id
+    returning name into v_name;
+  else
+    update public.products
+    set stock_quantity = stock_quantity + qty
+    where id = product_id
+    returning name into v_name;
+  end if;
 
   insert into public.stock_movements (product_id, product_name, change_qty, reason)
-  values (product_id, coalesce(v_name, '—'), qty, 'Estorno (pedido voltou ou foi excluído)');
+  values (
+    product_id,
+    coalesce(v_name, '—'),
+    qty,
+    'Estorno (pedido voltou ou foi excluído)' || case when size is not null then ' — Tam ' || size else '' end
+  );
 end;
 $$;
 
-grant execute on function public.decrement_stock(uuid, integer) to authenticated;
-grant execute on function public.increment_stock(uuid, integer) to authenticated;
+grant execute on function public.decrement_stock(uuid, integer, text) to authenticated;
+grant execute on function public.increment_stock(uuid, integer, text) to authenticated;
 
 drop trigger if exists store_settings_set_updated_at on public.store_settings;
 create trigger store_settings_set_updated_at
