@@ -10,6 +10,7 @@
   const CATEGORIES = ['Bolsas', 'Pulseiras', 'Relógios', 'Brincos', 'Cintos', 'Lenços', 'Colares', 'Óculos'];
   const PHOTO_MAX_DIMENSION = 1000;
   const PHOTO_QUALITY = 0.8;
+  const MAX_FEATURED = 10;
 
   const PAGE_SIZE = 15;
 
@@ -373,20 +374,21 @@
     updateFeaturedToggleUi();
   }
 
-  async function unsetOtherFeatured(exceptId) {
-    let query = window.sbClient.from('products').update({ is_featured: false }).eq('is_featured', true);
-    if (exceptId) query = query.neq('id', exceptId);
-    const { error } = await query;
-    if (error) throw error;
+  function countFeatured(excludeId) {
+    return state.products.filter((p) => p.is_featured && p.id !== excludeId).length;
   }
 
   async function toggleFeaturedQuick(product) {
+    const makeFeatured = !product.is_featured;
+    if (makeFeatured && countFeatured(product.id) >= MAX_FEATURED) {
+      showToast(`Limite de ${MAX_FEATURED} produtos em destaque atingido. Remova algum antes de adicionar outro.`, 'error');
+      return;
+    }
+
     try {
-      const makeFeatured = !product.is_featured;
-      if (makeFeatured) await unsetOtherFeatured(product.id);
       const { error } = await window.sbClient.from('products').update({ is_featured: makeFeatured }).eq('id', product.id);
       if (error) throw error;
-      showToast(makeFeatured ? `${product.name} agora é o destaque.` : 'Destaque removido.', 'success');
+      showToast(makeFeatured ? `${product.name} adicionado aos destaques.` : 'Destaque removido.', 'success');
       await loadProductsAdmin();
     } catch (err) {
       console.error('Erro ao atualizar destaque:', err);
@@ -452,6 +454,14 @@
       return;
     }
 
+    const wasFeatured = state.editingProductId
+      ? !!(state.products.find((p) => p.id === state.editingProductId) || {}).is_featured
+      : false;
+    if (payload.is_featured && !wasFeatured && countFeatured(state.editingProductId) >= MAX_FEATURED) {
+      showToast(`Limite de ${MAX_FEATURED} produtos em destaque atingido. Desmarque algum antes de adicionar outro.`, 'error');
+      return;
+    }
+
     setButtonLoading(submitBtn, 'Salvando...');
 
     try {
@@ -461,10 +471,6 @@
         uploadedUrls.push(await uploadPhoto(blob, 'product'));
       }
       payload.photo_urls = [...state.existingPhotoUrls, ...uploadedUrls];
-
-      if (payload.is_featured) {
-        await unsetOtherFeatured(state.editingProductId);
-      }
 
       if (state.editingProductId) {
         const { error } = await window.sbClient.from('products').update(payload).eq('id', state.editingProductId);

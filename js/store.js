@@ -414,7 +414,7 @@
   function renderFeaturedGrid() {
     const section = document.getElementById('featured-section');
     const grid = document.getElementById('featured-grid');
-    const list = state.products.filter((p) => p.is_featured || p.badge).slice(0, 8);
+    const list = state.products.filter((p) => p.is_featured || p.badge).slice(0, 10);
 
     if (list.length === 0) {
       section.classList.add('hidden');

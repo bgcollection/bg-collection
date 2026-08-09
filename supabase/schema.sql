@@ -55,7 +55,12 @@ alter table public.products add constraint products_category_check
 
 create index if not exists products_category_idx on public.products (category);
 create index if not exists products_is_active_idx on public.products (is_active);
-create unique index if not exists products_single_featured_idx on public.products (is_featured) where is_featured;
+
+-- Migração: agora dá pra marcar até 10 produtos em destaque ao mesmo tempo
+-- (antes só 1 podia ficar marcado). O limite de 10 é conferido no admin, não
+-- aqui no banco.
+drop index if exists products_single_featured_idx;
+create index if not exists products_is_featured_idx on public.products (is_featured) where is_featured;
 
 -- ----------------------------------------------------------------------------
 -- Tabela: orders
