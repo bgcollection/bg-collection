@@ -358,11 +358,25 @@
     document.getElementById('product-description').value = product ? (product.description || '') : '';
     document.getElementById('product-badge').value = product ? (product.badge || '') : '';
 
+    const productSizes = product ? (product.sizes || []) : [];
+    document.querySelectorAll('.product-size-option').forEach((box) => {
+      box.checked = productSizes.includes(box.value);
+    });
+    updateSizesFieldVisibility();
+
     document.getElementById('product-photos-input').value = '';
     renderPhotoPreviewGrid();
     updateFeaturedToggleUi();
 
     document.getElementById('product-modal').classList.remove('hidden');
+  }
+
+  function updateSizesFieldVisibility() {
+    const isRing = document.getElementById('product-category').value === 'Anéis';
+    document.getElementById('product-sizes-field').classList.toggle('hidden', !isRing);
+    if (!isRing) {
+      document.querySelectorAll('.product-size-option').forEach((box) => { box.checked = false; });
+    }
   }
 
   function updateFeaturedToggleUi() {
@@ -447,6 +461,9 @@
       description: document.getElementById('product-description').value.trim(),
       badge: document.getElementById('product-badge').value || null,
       is_featured: state.isFeatured,
+      sizes: document.getElementById('product-category').value === 'Anéis'
+        ? Array.from(document.querySelectorAll('.product-size-option:checked')).map((box) => box.value)
+        : [],
     };
 
     if (!payload.name) {
@@ -632,7 +649,7 @@
   function exportOrdersCsv() {
     const rows = [['Data', 'Cliente', 'Telefone', 'Itens', 'Total', 'Desconto', 'Cupom', 'Status']];
     filteredOrders().forEach((o) => {
-      const itemsSummary = (o.items || []).map((item) => `${item.quantity}x ${item.name}`).join('; ');
+      const itemsSummary = (o.items || []).map((item) => `${item.quantity}x ${item.name}${item.size ? ` (Tam ${item.size})` : ''}`).join('; ');
       rows.push([formatDate(o.created_at), o.customer_name || '', o.customer_phone || '', itemsSummary, o.total, o.discount || 0, o.coupon_code || '', o.status || 'pending']);
     });
     downloadCsv(`pedidos-${new Date().toISOString().slice(0, 10)}.csv`, rows);
@@ -658,7 +675,7 @@
     body.innerHTML = '';
     pageItems.forEach((order) => {
       const itemsSummary = (order.items || [])
-        .map((item) => `${item.quantity}x ${item.name}`)
+        .map((item) => `${item.quantity}x ${item.name}${item.size ? ` (Tam ${item.size})` : ''}`)
         .join(', ');
       const status = order.status || 'pending';
       const noteHtml = order.note
@@ -1357,6 +1374,7 @@
     document.getElementById('product-form').addEventListener('submit', handleProductSubmit);
     document.getElementById('product-photos-input').addEventListener('change', handleProductPhotosChange);
     document.getElementById('product-featured-toggle').addEventListener('click', toggleFeaturedFlag);
+    document.getElementById('product-category').addEventListener('change', updateSizesFieldVisibility);
 
     document.getElementById('confirm-modal-close').addEventListener('click', closeConfirmDelete);
     document.getElementById('confirm-cancel').addEventListener('click', closeConfirmDelete);

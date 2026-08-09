@@ -23,9 +23,13 @@ create table if not exists public.products (
   badge text check (badge is null or badge in ('new', 'sale')),
   is_featured boolean not null default false,
   is_active boolean not null default true,
+  sizes text[] not null default '{}',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+-- Migração: bancos criados antes das numerações de anéis.
+alter table public.products add column if not exists sizes text[] not null default '{}';
 
 -- Migração: bancos criados antes da galeria de múltiplas fotos tinham uma
 -- coluna única `photo_url`. Este bloco é seguro de rodar em bancos novos

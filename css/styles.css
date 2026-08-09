@@ -339,6 +339,61 @@ input, select, textarea {
   margin-top: 4px;
 }
 
+.size-checkbox-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.size-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  background: var(--bg2);
+}
+
+.size-checkbox input {
+  width: auto;
+  margin: 0;
+}
+
+/* ----------------------------------------------------------------------------
+   Vitrine — seletor de numeração (anéis)
+   ---------------------------------------------------------------------------- */
+.size-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.size-picker__option {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: all 0.15s ease;
+}
+
+.size-picker__option:hover {
+  border-color: var(--gold2);
+}
+
+.size-picker__option.active {
+  background: var(--gg);
+  border-color: transparent;
+  color: #fff;
+}
+
 /* ----------------------------------------------------------------------------
    Banners de estado (loading / erro / vazio / sucesso)
    ---------------------------------------------------------------------------- */
