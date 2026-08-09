@@ -1313,8 +1313,10 @@
 
     const lowStockAlert = document.getElementById('low-stock-alert');
     const lowStockList = document.getElementById('low-stock-list');
+    const lowStockCount = document.getElementById('low-stock-count');
     if (data.lowStock.length > 0) {
       lowStockAlert.classList.remove('hidden');
+      lowStockCount.textContent = `(${data.lowStock.length})`;
       lowStockList.innerHTML = data.lowStock
         .map((p) => `<li>${escapeHtml(p.name)} <span class="qty">${p.stock_quantity} un.</span></li>`)
         .join('');
@@ -1385,6 +1387,11 @@
 
     document.querySelectorAll('.admin-nav__link[data-view]').forEach((btn) => {
       btn.addEventListener('click', () => switchView(btn.dataset.view));
+    });
+
+    document.getElementById('low-stock-toggle').addEventListener('click', () => {
+      document.getElementById('low-stock-list').classList.toggle('hidden');
+      document.getElementById('low-stock-chevron').classList.toggle('open');
     });
 
     document.getElementById('new-product-btn').addEventListener('click', () => openProductModal(null));

@@ -50,8 +50,11 @@
         <div class="admin-topbar"><h2>Dashboard</h2></div>
 
         <div id="low-stock-alert" class="low-stock-alert hidden">
-          <h3>⚠️ Estoque baixo</h3>
-          <ul class="mini-list" id="low-stock-list"></ul>
+          <button type="button" class="low-stock-alert__toggle" id="low-stock-toggle">
+            <h3>⚠️ Estoque baixo <span class="low-stock-alert__count" id="low-stock-count"></span></h3>
+            <span class="low-stock-alert__chevron" id="low-stock-chevron">▾</span>
+          </button>
+          <ul class="mini-list hidden" id="low-stock-list"></ul>
         </div>
 
         <div class="stat-grid" id="stat-grid"></div>
