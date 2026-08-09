@@ -331,18 +331,25 @@
             </div>
           </div>
           <div class="field hidden" id="product-sizes-field">
-            <label>Estoque por numeração</label>
-            <div class="size-stock-grid">
-              <div class="size-stock-item"><span>15</span><input type="number" class="product-size-qty" data-size="15" min="0" step="1" value="0" /></div>
-              <div class="size-stock-item"><span>16</span><input type="number" class="product-size-qty" data-size="16" min="0" step="1" value="0" /></div>
-              <div class="size-stock-item"><span>17</span><input type="number" class="product-size-qty" data-size="17" min="0" step="1" value="0" /></div>
-              <div class="size-stock-item"><span>18</span><input type="number" class="product-size-qty" data-size="18" min="0" step="1" value="0" /></div>
-              <div class="size-stock-item"><span>19</span><input type="number" class="product-size-qty" data-size="19" min="0" step="1" value="0" /></div>
-              <div class="size-stock-item"><span>20</span><input type="number" class="product-size-qty" data-size="20" min="0" step="1" value="0" /></div>
-              <div class="size-stock-item"><span>21</span><input type="number" class="product-size-qty" data-size="21" min="0" step="1" value="0" /></div>
-              <div class="size-stock-item"><span>22</span><input type="number" class="product-size-qty" data-size="22" min="0" step="1" value="0" /></div>
+            <label class="size-checkbox" style="width:auto;display:inline-flex;margin-bottom:10px;">
+              <input type="checkbox" id="product-adjustable-size" />
+              Tamanho ajustável (não tem numeração fixa)
+            </label>
+            <div id="product-sizes-grid-wrap">
+              <label>Estoque por numeração</label>
+              <div class="size-stock-grid">
+                <div class="size-stock-item"><span>15</span><input type="number" class="product-size-qty" data-size="15" min="0" step="1" value="0" /></div>
+                <div class="size-stock-item"><span>16</span><input type="number" class="product-size-qty" data-size="16" min="0" step="1" value="0" /></div>
+                <div class="size-stock-item"><span>17</span><input type="number" class="product-size-qty" data-size="17" min="0" step="1" value="0" /></div>
+                <div class="size-stock-item"><span>18</span><input type="number" class="product-size-qty" data-size="18" min="0" step="1" value="0" /></div>
+                <div class="size-stock-item"><span>19</span><input type="number" class="product-size-qty" data-size="19" min="0" step="1" value="0" /></div>
+                <div class="size-stock-item"><span>20</span><input type="number" class="product-size-qty" data-size="20" min="0" step="1" value="0" /></div>
+                <div class="size-stock-item"><span>21</span><input type="number" class="product-size-qty" data-size="21" min="0" step="1" value="0" /></div>
+                <div class="size-stock-item"><span>22</span><input type="number" class="product-size-qty" data-size="22" min="0" step="1" value="0" /></div>
+              </div>
+              <div class="field-hint">Quantos anéis você tem de cada numeração. O cliente só vê as numerações com estoque maior que 0. O campo "Estoque" acima soma tudo automaticamente.</div>
             </div>
-            <div class="field-hint">Quantos anéis você tem de cada numeração. O cliente só vê as numerações com estoque maior que 0. O campo "Estoque" acima soma tudo automaticamente.</div>
+            <div class="field-hint hidden" id="product-adjustable-hint">Numeração ajustável — o cliente não escolhe tamanho, é só adicionar. Preencha o campo "Estoque" acima normalmente.</div>
           </div>
           <div class="field-row">
             <div class="field">

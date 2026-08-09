@@ -362,6 +362,7 @@
     document.querySelectorAll('.product-size-qty').forEach((input) => {
       input.value = sizeStock[input.dataset.size] || 0;
     });
+    document.getElementById('product-adjustable-size').checked = product ? !!product.is_adjustable_size : false;
     updateSizesFieldVisibility();
 
     document.getElementById('product-photos-input').value = '';
@@ -379,12 +380,21 @@
   function updateSizesFieldVisibility() {
     const isRing = document.getElementById('product-category').value === 'Anéis';
     document.getElementById('product-sizes-field').classList.toggle('hidden', !isRing);
-    const stockInput = document.getElementById('product-stock');
-    stockInput.readOnly = isRing;
-    if (isRing) {
-      stockInput.value = sumSizeQuantities();
-    } else {
+
+    if (!isRing) {
       document.querySelectorAll('.product-size-qty').forEach((input) => { input.value = 0; });
+      document.getElementById('product-adjustable-size').checked = false;
+    }
+
+    const adjustable = document.getElementById('product-adjustable-size').checked;
+    document.getElementById('product-sizes-grid-wrap').classList.toggle('hidden', !isRing || adjustable);
+    document.getElementById('product-adjustable-hint').classList.toggle('hidden', !isRing || !adjustable);
+
+    const stockInput = document.getElementById('product-stock');
+    const useSizeSum = isRing && !adjustable;
+    stockInput.readOnly = useSizeSum;
+    if (useSizeSum) {
+      stockInput.value = sumSizeQuantities();
     }
   }
 
@@ -461,8 +471,10 @@
     const submitBtn = document.getElementById('product-submit');
 
     const isRing = document.getElementById('product-category').value === 'Anéis';
+    const isAdjustable = isRing && document.getElementById('product-adjustable-size').checked;
+    const usesSizeStock = isRing && !isAdjustable;
     const sizeStock = {};
-    if (isRing) {
+    if (usesSizeStock) {
       document.querySelectorAll('.product-size-qty').forEach((input) => {
         const qty = Number(input.value) || 0;
         if (qty > 0) sizeStock[input.dataset.size] = qty;
@@ -472,7 +484,7 @@
     const payload = {
       name: document.getElementById('product-name').value.trim(),
       category: document.getElementById('product-category').value,
-      stock_quantity: isRing ? sumSizeQuantities() : Number(document.getElementById('product-stock').value),
+      stock_quantity: usesSizeStock ? sumSizeQuantities() : Number(document.getElementById('product-stock').value),
       price: Number(document.getElementById('product-price').value),
       cost_price: Number(document.getElementById('product-cost').value),
       low_stock_threshold: Number(document.getElementById('product-low-stock').value),
@@ -480,6 +492,7 @@
       badge: document.getElementById('product-badge').value || null,
       is_featured: state.isFeatured,
       size_stock: sizeStock,
+      is_adjustable_size: isAdjustable,
     };
 
     if (!payload.name) {
@@ -1401,6 +1414,7 @@
     document.getElementById('product-photos-input').addEventListener('change', handleProductPhotosChange);
     document.getElementById('product-featured-toggle').addEventListener('click', toggleFeaturedFlag);
     document.getElementById('product-category').addEventListener('change', updateSizesFieldVisibility);
+    document.getElementById('product-adjustable-size').addEventListener('change', updateSizesFieldVisibility);
     document.querySelectorAll('.product-size-qty').forEach((input) => {
       input.addEventListener('input', () => {
         document.getElementById('product-stock').value = sumSizeQuantities();

@@ -24,9 +24,14 @@ create table if not exists public.products (
   is_featured boolean not null default false,
   is_active boolean not null default true,
   size_stock jsonb not null default '{}'::jsonb,
+  is_adjustable_size boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+-- Migração: bancos criados antes do anel de numeração ajustável (sem
+-- numeração fixa — usa só o estoque normal, como qualquer outro produto).
+alter table public.products add column if not exists is_adjustable_size boolean not null default false;
 
 -- Migração: bancos criados antes das numerações de anéis. size_stock guarda
 -- {"15": 2, "18": 1, ...} — quantidade em estoque por numeração. stock_quantity
