@@ -284,7 +284,10 @@
     renderCategoryTabs();
     renderStoreNav();
     renderProducts();
-    document.getElementById('category-tabs').scrollIntoView({ behavior: 'smooth' });
+    // Rola direto pra grade de produtos filtrada — se parasse nos círculos de
+    // categoria, a seção "Produtos em destaque" ficava no meio do caminho e
+    // a pessoa precisava rolar de novo pra ver os itens da categoria.
+    document.getElementById('product-grid').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   function renderCategoryTabs() {
