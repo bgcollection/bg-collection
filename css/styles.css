@@ -607,8 +607,7 @@ input, select, textarea {
 .store-search {
   border-top: 1px solid var(--border);
   overflow: hidden;
-  max-height: 60px;
-  transition: max-height 0.2s ease;
+  max-height: 500px;
 }
 
 .store-search.hidden {
@@ -638,6 +637,61 @@ input, select, textarea {
   border: none;
   color: var(--text2);
   font-size: 0.9rem;
+}
+
+.search-results {
+  max-height: 360px;
+  overflow-y: auto;
+  padding-bottom: 12px;
+}
+
+.search-results__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 4px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.search-results__item:hover {
+  background: var(--bg2);
+}
+
+.search-results__thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  background: var(--bg2);
+  flex-shrink: 0;
+}
+
+.search-results__info {
+  flex: 1;
+  min-width: 0;
+}
+
+.search-results__name {
+  font-size: 0.85rem;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.search-results__price {
+  font-size: 0.8rem;
+  color: var(--gold2);
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.search-results__empty {
+  padding: 8px 4px;
+  color: var(--text2);
+  font-size: 0.85rem;
 }
 
 @media (max-width: 900px) {

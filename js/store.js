@@ -420,6 +420,53 @@
     return card;
   }
 
+  function renderSearchResults(term) {
+    const wrap = document.getElementById('search-results');
+    const t = term.trim().toLowerCase();
+
+    if (!t) {
+      wrap.classList.add('hidden');
+      wrap.innerHTML = '';
+      return;
+    }
+
+    const matches = state.products.filter((p) => p.name.toLowerCase().includes(t)).slice(0, 8);
+    wrap.classList.remove('hidden');
+
+    if (matches.length === 0) {
+      wrap.innerHTML = '<div class="search-results__empty">Nenhum produto encontrado.</div>';
+      return;
+    }
+
+    wrap.innerHTML = matches
+      .map((p) => {
+        const photo = (p.photo_urls && p.photo_urls[0]) || '';
+        return `
+          <div class="search-results__item" data-id="${escapeHtml(p.id)}">
+            ${photo ? `<img class="search-results__thumb" src="${escapeHtml(photo)}" alt="" />` : '<div class="search-results__thumb"></div>'}
+            <div class="search-results__info">
+              <div class="search-results__name">${escapeHtml(p.name)}</div>
+            </div>
+            <div class="search-results__price">${formatBRL(p.price)}</div>
+          </div>
+        `;
+      })
+      .join('');
+
+    wrap.querySelectorAll('.search-results__item').forEach((el) => {
+      el.addEventListener('click', () => {
+        const product = state.products.find((p) => p.id === el.dataset.id);
+        if (!product) return;
+        document.getElementById('store-search').classList.add('hidden');
+        document.getElementById('store-search-input').value = '';
+        state.searchTerm = '';
+        renderProducts();
+        renderSearchResults('');
+        openLightbox(product);
+      });
+    });
+  }
+
   function visibleProducts() {
     const term = state.searchTerm.trim().toLowerCase();
     return state.products.filter((p) => {
@@ -946,10 +993,12 @@
       document.getElementById('store-search-input').value = '';
       state.searchTerm = '';
       renderProducts();
+      renderSearchResults('');
     });
     document.getElementById('store-search-input').addEventListener('input', (e) => {
       state.searchTerm = e.target.value;
       renderProducts();
+      renderSearchResults(e.target.value);
     });
 
     document.getElementById('favorites-toggle-btn').addEventListener('click', () => {
