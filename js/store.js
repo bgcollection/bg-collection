@@ -338,14 +338,16 @@
     });
   }
 
+  // O menu do topo só tem os links fixos — a lista de categorias (que cresce
+  // conforme a loja cadastra mais tipos de produto) fica só nos círculos
+  // abaixo do hero, que já são feitos pra rolar com muitos itens sem cortar
+  // nada visualmente.
   function renderStoreNav() {
     const nav = document.getElementById('store-nav');
-    const present = CATEGORIES.filter((cat) => state.products.some((p) => p.category === cat));
 
     const links = [
       { label: 'Início', action: () => window.scrollTo({ top: 0, behavior: 'smooth' }) },
       { label: 'Coleção', action: () => selectCategory('Todos') },
-      ...present.map((cat) => ({ label: cat, action: () => selectCategory(cat) })),
       { label: 'Contato', action: () => document.querySelector('.store-footer').scrollIntoView({ behavior: 'smooth' }) },
     ];
 
@@ -354,7 +356,6 @@
       const a = document.createElement('a');
       a.href = '#';
       a.textContent = link.label;
-      if (!state.showFavoritesOnly && link.label === state.activeCategory) a.classList.add('active');
       a.addEventListener('click', (e) => {
         e.preventDefault();
         link.action();
