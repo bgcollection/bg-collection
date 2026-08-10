@@ -421,8 +421,8 @@
     return card;
   }
 
-  function renderSearchResults(term) {
-    const wrap = document.getElementById('search-results');
+  function renderSearchResults(term, resultsId, inputId) {
+    const wrap = document.getElementById(resultsId);
     const t = term.trim().toLowerCase();
 
     if (!t) {
@@ -459,10 +459,10 @@
         const product = state.products.find((p) => p.id === el.dataset.id);
         if (!product) return;
         document.getElementById('store-search').classList.add('hidden');
-        document.getElementById('store-search-input').value = '';
+        document.getElementById(inputId).value = '';
         state.searchTerm = '';
         renderProducts();
-        renderSearchResults('');
+        renderSearchResults('', resultsId, inputId);
         openLightbox(product);
       });
     });
@@ -994,12 +994,28 @@
       document.getElementById('store-search-input').value = '';
       state.searchTerm = '';
       renderProducts();
-      renderSearchResults('');
+      renderSearchResults('', 'search-results', 'store-search-input');
     });
     document.getElementById('store-search-input').addEventListener('input', (e) => {
       state.searchTerm = e.target.value;
       renderProducts();
-      renderSearchResults(e.target.value);
+      renderSearchResults(e.target.value, 'search-results', 'store-search-input');
+    });
+
+    document.getElementById('nav-search-input').addEventListener('input', (e) => {
+      state.searchTerm = e.target.value;
+      renderProducts();
+      renderSearchResults(e.target.value, 'nav-search-results', 'nav-search-input');
+    });
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.store-nav-search')) {
+        document.getElementById('nav-search-results').classList.add('hidden');
+      }
+    });
+    document.getElementById('nav-search-input').addEventListener('focus', () => {
+      if (document.getElementById('nav-search-input').value.trim()) {
+        renderSearchResults(document.getElementById('nav-search-input').value, 'nav-search-results', 'nav-search-input');
+      }
     });
 
     document.getElementById('favorites-toggle-btn').addEventListener('click', () => {
