@@ -113,7 +113,9 @@
 
   async function loadCartCounts() {
     try {
-      const { data, error } = await window.sbClient.rpc('get_cart_counts', { p_exclude_session: getSessionId() });
+      // Sem excluir a própria sessão — todo mundo vê o mesmo número total
+      // (ex: "3 pessoas"), não "quantas outras pessoas além de mim".
+      const { data, error } = await window.sbClient.rpc('get_cart_counts', {});
       if (error) throw error;
       state.cartCounts = new Map((data || []).map((row) => [row.product_id, row.cart_count]));
     } catch (err) {
@@ -849,6 +851,10 @@
   function openCart() {
     renderCart();
     document.getElementById('cart-overlay').classList.remove('hidden');
+    // Busca de novo na hora de abrir, pra não mostrar um número desatualizado
+    // de quando a página carregou (outras pessoas podem ter mexido no
+    // carrinho delas desde então).
+    loadCartCounts().then(() => renderCart());
   }
 
   function closeCart() {
