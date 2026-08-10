@@ -382,9 +382,6 @@
       badgeHtml = '<span class="product-card__badge badge-sale">Sale</span>';
     }
 
-    const cartCount = cartCountFor(product);
-    const showCartAlert = !outOfStock && cartCount > 0 && product.stock_quantity <= product.low_stock_threshold;
-
     card.innerHTML = `
       <div class="product-card__photo-wrap">
         ${photo ? `<img src="${escapeHtml(photo)}" alt="${escapeHtml(product.name)}" loading="lazy" />` : ''}
@@ -396,7 +393,6 @@
       <div class="product-card__body">
         <div class="product-card__name">${escapeHtml(product.name)}</div>
         <div class="product-card__price">${formatBRL(product.price)}</div>
-        ${showCartAlert ? `<div class="cart-alert">🔥 ${escapeHtml(cartCountLabel(cartCount))}</div>` : ''}
         <button class="btn btn-sm product-card__add ${outOfStock ? 'btn-outline' : 'btn-primary'}">
           ${outOfStock ? 'Encomendar' : 'Adicionar'}
         </button>
@@ -472,12 +468,6 @@
     document.getElementById('lightbox-cat').textContent = product.category;
     document.getElementById('lightbox-name').textContent = product.name;
     document.getElementById('lightbox-price').textContent = formatBRL(product.price);
-
-    const cartCount = cartCountFor(product);
-    const showCartAlert = product.stock_quantity > 0 && cartCount > 0 && product.stock_quantity <= product.low_stock_threshold;
-    const lightboxCartAlert = document.getElementById('lightbox-cart-alert');
-    lightboxCartAlert.classList.toggle('hidden', !showCartAlert);
-    lightboxCartAlert.textContent = showCartAlert ? `🔥 ${cartCountLabel(cartCount)}` : '';
 
     renderLightboxSizes(product);
     updateLightboxAddButton(product);
@@ -752,6 +742,15 @@
     itemsWrap.innerHTML = '';
 
     state.cart.forEach((item) => {
+      const product = state.products.find((p) => p.id === item.productId);
+      let cartAlertHtml = '';
+      if (product) {
+        const cartCount = cartCountFor(product);
+        if (cartCount > 0 && product.stock_quantity > 0 && product.stock_quantity <= product.low_stock_threshold) {
+          cartAlertHtml = `<div class="cart-alert">🔥 ${escapeHtml(cartCountLabel(cartCount))}</div>`;
+        }
+      }
+
       const row = document.createElement('div');
       row.className = 'cart-item';
       row.innerHTML = `
@@ -759,6 +758,7 @@
         <div class="cart-item__info">
           <div class="cart-item__name">${escapeHtml(item.name)}${item.size ? ` <span style="color:var(--text2);font-weight:400;">— Tam ${escapeHtml(item.size)}</span>` : ''}</div>
           <div class="cart-item__price">${formatBRL(item.price * item.quantity)}</div>
+          ${cartAlertHtml}
           <div class="qty-control">
             <button type="button" data-action="dec" aria-label="Diminuir quantidade">−</button>
             <span>${item.quantity}</span>
