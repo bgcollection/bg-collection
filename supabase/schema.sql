@@ -159,6 +159,26 @@ create table if not exists public.cart_sessions (
   updated_at timestamptz not null default now()
 );
 
+-- Quantos carrinhos (de outras pessoas) têm cada produto agora — usado na
+-- vitrine pra mostrar "X pessoas com esse produto no carrinho" em itens de
+-- estoque baixo. SECURITY DEFINER porque anon não tem select direto em
+-- cart_sessions (só essa contagem agregada, sem expor os carrinhos inteiros).
+create or replace function public.get_cart_counts(p_exclude_session text default null)
+returns table(product_id uuid, cart_count integer)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select (elem->>'productId')::uuid as product_id, count(distinct cs.session_id)::integer as cart_count
+  from public.cart_sessions cs,
+       jsonb_array_elements(cs.items) as elem
+  where p_exclude_session is null or cs.session_id <> p_exclude_session
+  group by (elem->>'productId')::uuid;
+$$;
+
+grant execute on function public.get_cart_counts(text) to anon, authenticated;
+
 -- ----------------------------------------------------------------------------
 -- Tabela: stock_movements
 -- Histórico de cada entrada/saída de estoque (venda, estorno, ajuste manual).

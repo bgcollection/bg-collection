@@ -25,6 +25,7 @@
     favorites: loadFavorites(),
     showFavoritesOnly: false,
     searchTerm: '',
+    cartCounts: new Map(),
   };
 
   // -- Helpers --------------------------------------------------------------
@@ -108,6 +109,25 @@
       localStorage.setItem(SESSION_STORAGE_KEY, id);
     }
     return id;
+  }
+
+  async function loadCartCounts() {
+    try {
+      const { data, error } = await window.sbClient.rpc('get_cart_counts', { p_exclude_session: getSessionId() });
+      if (error) throw error;
+      state.cartCounts = new Map((data || []).map((row) => [row.product_id, row.cart_count]));
+    } catch (err) {
+      console.error('Não foi possível carregar quantas pessoas têm cada produto no carrinho:', err);
+      state.cartCounts = new Map();
+    }
+  }
+
+  function cartCountFor(product) {
+    return state.cartCounts.get(product.id) || 0;
+  }
+
+  function cartCountLabel(count) {
+    return count === 1 ? '1 pessoa está com esse produto no carrinho' : `${count} pessoas estão com esse produto no carrinho`;
   }
 
   function trackVisit() {
@@ -210,11 +230,10 @@
     const grid = document.getElementById('product-grid');
 
     try {
-      const { data, error } = await window.sbClient
-        .from('products')
-        .select('*')
-        .eq('is_active', true)
-        .order('created_at', { ascending: false });
+      const [{ data, error }] = await Promise.all([
+        window.sbClient.from('products').select('*').eq('is_active', true).order('created_at', { ascending: false }),
+        loadCartCounts(),
+      ]);
 
       if (error) throw error;
 
@@ -363,6 +382,9 @@
       badgeHtml = '<span class="product-card__badge badge-sale">Sale</span>';
     }
 
+    const cartCount = cartCountFor(product);
+    const showCartAlert = !outOfStock && cartCount > 0 && product.stock_quantity <= product.low_stock_threshold;
+
     card.innerHTML = `
       <div class="product-card__photo-wrap">
         ${photo ? `<img src="${escapeHtml(photo)}" alt="${escapeHtml(product.name)}" loading="lazy" />` : ''}
@@ -374,6 +396,7 @@
       <div class="product-card__body">
         <div class="product-card__name">${escapeHtml(product.name)}</div>
         <div class="product-card__price">${formatBRL(product.price)}</div>
+        ${showCartAlert ? `<div class="cart-alert">🔥 ${escapeHtml(cartCountLabel(cartCount))}</div>` : ''}
         <button class="btn btn-sm product-card__add ${outOfStock ? 'btn-outline' : 'btn-primary'}">
           ${outOfStock ? 'Encomendar' : 'Adicionar'}
         </button>
@@ -449,6 +472,12 @@
     document.getElementById('lightbox-cat').textContent = product.category;
     document.getElementById('lightbox-name').textContent = product.name;
     document.getElementById('lightbox-price').textContent = formatBRL(product.price);
+
+    const cartCount = cartCountFor(product);
+    const showCartAlert = product.stock_quantity > 0 && cartCount > 0 && product.stock_quantity <= product.low_stock_threshold;
+    const lightboxCartAlert = document.getElementById('lightbox-cart-alert');
+    lightboxCartAlert.classList.toggle('hidden', !showCartAlert);
+    lightboxCartAlert.textContent = showCartAlert ? `🔥 ${cartCountLabel(cartCount)}` : '';
 
     renderLightboxSizes(product);
     updateLightboxAddButton(product);
