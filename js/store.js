@@ -421,8 +421,8 @@
     return card;
   }
 
-  function renderSearchResults(term, resultsId, inputId) {
-    const wrap = document.getElementById(resultsId);
+  function renderSearchResults(term) {
+    const wrap = document.getElementById('search-results');
     const t = term.trim().toLowerCase();
 
     if (!t) {
@@ -459,10 +459,10 @@
         const product = state.products.find((p) => p.id === el.dataset.id);
         if (!product) return;
         document.getElementById('store-search').classList.add('hidden');
-        document.getElementById(inputId).value = '';
+        document.getElementById('store-search-input').value = '';
         state.searchTerm = '';
         renderProducts();
-        renderSearchResults('', resultsId, inputId);
+        renderSearchResults('');
         openLightbox(product);
       });
     });
@@ -994,28 +994,12 @@
       document.getElementById('store-search-input').value = '';
       state.searchTerm = '';
       renderProducts();
-      renderSearchResults('', 'search-results', 'store-search-input');
+      renderSearchResults('');
     });
     document.getElementById('store-search-input').addEventListener('input', (e) => {
       state.searchTerm = e.target.value;
       renderProducts();
-      renderSearchResults(e.target.value, 'search-results', 'store-search-input');
-    });
-
-    document.getElementById('nav-search-input').addEventListener('input', (e) => {
-      state.searchTerm = e.target.value;
-      renderProducts();
-      renderSearchResults(e.target.value, 'nav-search-results', 'nav-search-input');
-    });
-    document.addEventListener('click', (e) => {
-      if (!e.target.closest('.store-nav-search')) {
-        document.getElementById('nav-search-results').classList.add('hidden');
-      }
-    });
-    document.getElementById('nav-search-input').addEventListener('focus', () => {
-      if (document.getElementById('nav-search-input').value.trim()) {
-        renderSearchResults(document.getElementById('nav-search-input').value, 'nav-search-results', 'nav-search-input');
-      }
+      renderSearchResults(e.target.value);
     });
 
     document.getElementById('favorites-toggle-btn').addEventListener('click', () => {

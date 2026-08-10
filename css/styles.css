@@ -688,64 +688,9 @@ input, select, textarea {
   font-size: 0.85rem;
 }
 
-.store-header__nav-group {
-  display: flex;
-  align-items: center;
-  gap: 24px;
-  flex: 1;
-  min-width: 0;
-}
-
-.store-nav-search {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-full);
-  padding: 7px 14px;
-  flex-shrink: 0;
-}
-
-.store-nav-search svg {
-  color: var(--text2);
-  flex-shrink: 0;
-}
-
-.store-nav-search input {
-  border: none;
-  background: none;
-  outline: none;
-  font-size: 0.8rem;
-  width: 150px;
-  color: var(--text);
-}
-
-.store-nav-search .search-results {
-  position: absolute;
-  top: calc(100% + 10px);
-  right: 0;
-  width: 320px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md);
-  padding: 8px 12px;
-  z-index: 200;
-}
-
-.icon-btn.mobile-only {
-  display: none;
-}
-
 @media (max-width: 900px) {
-  .store-header__nav-group {
+  .store-nav {
     display: none;
-  }
-
-  .icon-btn.mobile-only {
-    display: flex;
   }
 }
 
