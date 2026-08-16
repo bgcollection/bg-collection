@@ -1096,6 +1096,15 @@ input, select, textarea {
   .product-card__body {
     padding: 8px 10px 10px;
   }
+
+  .product-grid.featured-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .featured-grid .product-card {
+    flex: initial;
+  }
 }
 
 .product-card__name {
